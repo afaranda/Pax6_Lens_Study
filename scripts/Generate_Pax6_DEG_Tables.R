@@ -18,7 +18,7 @@ if(file.exists("data/pax6_master_dgelists.Rdata")){
 } else {
   source("scripts/Prepare_Expression_DGELists.R")
 }
-
+source("scripts/Overlap_Comparison_Functions.R")
 source("scripts/Wrap_edgeR_Functions.R")
 source("scripts/PrincipalComponents.R")
 
@@ -70,7 +70,7 @@ for ( filt in levels(pax6.master$samples$ribo_filter)){
     for(obj in c("dge", "fit")){
       pax6.deg_master <- bind_rows(
         pax6.deg_master, 
-        genDegTable(set[[obj]], cn[1],cn[2], set[["design"]]) %>%
+        genPairwiseDegTable(set[[obj]], cn[1],cn[2], set[["design"]]) %>%
           dplyr::mutate(Filtered = filt, Partition = "All")
       ) %>% tibble::remove_rownames()
     }
@@ -119,7 +119,7 @@ for (filt in c("geno", "ribo", "degnorm") ){
     for(i in c("dge", "fit")){
       pax6.deg_master <- bind_rows(
         pax6.deg_master, 
-        genDegTable(set[[i]], cn[1],cn[2], set[["design"]]) %>%
+        genPairwiseDegTable(set[[i]], cn[1],cn[2], set[["design"]]) %>%
           dplyr::mutate(Filtered = filt, Partition = "Pair")
       ) %>% tibble::remove_rownames()
     }
@@ -137,48 +137,20 @@ for (filt in c("geno", "ribo", "degnorm") ){
   # Construct and normalize all-sample DGEList object, fit QLF Model
   dge <- master[,master$samples$ribo_filter == filt ]
   design <- model.matrix(~genotype * cell_type, dge$samples)
-  obj <- processByDesign(y=dge, design=design)
-  
-  dge$samples$group<-factor(                # Add grouping factor
-    paste0(
-      dge$samples$genotype, 
-      gsub("(i|b|p)","", dge$samples$cell_type)
-    ), levels=c("WTE", "WTF", "P6E", "P6F")
+  obj <- processByDesign(
+    y=dge, design=design, 
+    norm=ifelse(filt != "degnorm", "TMM", "NONE")
   )
- 
-  for(
-    cn in list(
-      c("WTE", "WTF"),
-      c("WTE", "P6E"),
-      c("WTF", "P6F"),
-      c("P6E", "P6F")
+  
+  
+  pax6.deg_master <- iterate_edgeR_design_coefficients(
+    dge=obj$dge, fit=obj$fit, deg=pax6.deg_master,
+    design=design, respath = "results", prefix="2Way",
+    df=data.frame(), coefs=c(2:4), group_label_list = c(
+      c("Epi", "Fib"), c("WT", "P6"), c("WTEpi", "P6Fib")
     )
-  ){
-    set <- subsetDGEListByGroups(
-      dge, groups=c(cn[1], cn[2]),
-      norm=ifelse(filt=="degnorm", "NONE", "TMM")
-    )
-    pax6.disp_master <- bind_rows(
-      pax6.disp_master,
-      data.frame(
-        Partition = "Pair",
-        Filtered = filt,
-        Contrast = paste0(cn[2], "v", cn[1]),
-        Disp = set[["dge"]]$common.dispersion
-      )
-    )    
-    
-    for(i in c("dge", "fit")){
-      pax6.deg_master <- bind_rows(
-        pax6.deg_master, 
-        genDegTable(set[[i]], cn[1],cn[2], set[["design"]]) %>%
-          dplyr::mutate(Filtered = filt, Partition = "Pair")
-      ) %>% tibble::remove_rownames()
-    }
-  }
+  )[[2]]
 }
-
-
 
 save(
   pax6.deg_master, 

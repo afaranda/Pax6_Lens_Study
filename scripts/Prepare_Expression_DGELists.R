@@ -63,6 +63,7 @@ samples<-data.frame(file=list.files(data_dir, pattern="GeneCount"))%>%
   arrange(ribo_filter, cell_type, genotype) %>%
   as.data.frame() %>%
   tibble::column_to_rownames("sample")
+  samples$label <- row.names(samples)
 
 # Aggregate Pax6 Study Samples
 pax6.master<-readDGE(
@@ -82,7 +83,8 @@ load(paste0(data_dir,"/","DegNorm_Analysis_Results_ribo.Rdata"))
  
 samples <- pax6.master$samples %>%
   filter(ribo_filter=="ribo") %>%
-  tibble::rownames_to_column("label") %>%
+  #tibble::rownames_to_column("label") %>%
+  select(-group, -lib.size, -norm.factors) %>%
   mutate(
     label=gsub("_ribo_", "_degnorm_", label),
     ribo_filter="degnorm"

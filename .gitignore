@@ -3,3 +3,4 @@ data/*
 *.Rdata
 .DS_Store
 *~
+.Rproj.user

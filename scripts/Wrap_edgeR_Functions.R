@@ -223,12 +223,12 @@ subsetDGEListByGroups<-function(y, groups=c("GR1", "GR2"), norm="TMM"){
 }
 
 #### Define function to generate DEG Tables from a fit or DGEList ############
-genDegTable<-function(y, group1, group2, design){
+genPairwiseDegTable<-function(y, group1, group2, design){
   print(
     paste(
       group1, "Samples:",
       paste(
-        y$samples %>% filter(group == group1) %>%row.names(),
+        y$samples %>% filter(group == group1) %>% pull("label"),
         collapse = ", "
       )
     )
@@ -237,7 +237,7 @@ genDegTable<-function(y, group1, group2, design){
     paste(
       group2, "Samples:",
       paste(
-        y$samples %>% filter(group == group2) %>%row.names(),
+        y$samples %>% filter(group == group2) %>% pull("label"),
         collapse = ", "
       )
     )
@@ -270,8 +270,7 @@ genDegTable<-function(y, group1, group2, design){
           Test, Group_1, Group_2,
           gene_id, logFC, logCPM, PValue, FDR, 
           Avg1 = as.name(paste0(group1, "_Avg_FPKM")),
-          Avg2 = as.name(paste0(group2, "_Avg_FPKM")),
-          com_disp, trend_disp, tag_disp
+          Avg2 = as.name(paste0(group2, "_Avg_FPKM"))
         )
     )
   } else if(class(y) == "DGEList") {
@@ -290,12 +289,10 @@ genDegTable<-function(y, group1, group2, design){
           Test, Group_1, Group_2,
           gene_id, logFC, logCPM, PValue, FDR, 
           Avg1 = as.name(paste0(group1, "_Avg_FPKM")),
-          Avg2 = as.name(paste0(group2, "_Avg_FPKM")),
-          com_disp, trend_disp, tag_disp
+          Avg2 = as.name(paste0(group2, "_Avg_FPKM"))
         )
     )
-  } else if(class(y) == "EList"){
-    fit <- lmFit(y, design=design)
+  } else if(class(y) == "MArrayLM"){
     cft <- contrasts.fit(
       fit, contrasts=makeContrasts(
         contrasts = paste(group2, group2, sep="-"),
@@ -321,3 +318,181 @@ genDegTable<-function(y, group1, group2, design){
     )
   }
 }
+
+## Generate a DEG table using coefficients to a design matrix
+genDesignCoefDegTable<-function(y, design, coef, group_labels){
+  
+  # Print Experimental Design and samples associated with each coeffient
+  print(design)
+  for(i in c(1,coef)){
+    print(colnames(design)[i])
+    print(y$samples[which(design[,i] == 1),"label"])
+  }
+  
+  if(class(y) == "DGEGLM"){
+    print(coef)
+    return(
+      as.data.frame(
+        topTags(
+          glmQLFTest(y, coef=coef), n=Inf
+        )
+      ) %>% 
+        dplyr::mutate(
+          Test = "QLFTest",
+          Group_1 = group_labels[1], 
+          Group_2 = group_labels[2],
+          Avg1 = 2^((logCPM - (logFC/2)) - log2(eu_length/1000)),
+          Avg2 = 2^((logCPM + (logFC/2)) - log2(eu_length/1000))
+        ) %>%
+        dplyr::select(
+          Test, Group_1, Group_2,
+          gene_id, logFC, logCPM, PValue, FDR, 
+          Avg1, Avg2
+        )
+    )
+  } else if(class(y) == "DGEList") {
+    print("Analysis Reqires a fitted model")
+    return(NULL)
+    
+  } else if(class(y) == "MArrayLM"){
+    ebs <- eBayes(y)
+    return(
+      x <- as.data.frame(
+        topTable(ebs, n=Inf, coef=coef)
+      ) %>% 
+        dplyr::mutate(
+          Test = "LimmaVoom",
+          Group_1 = group_labels[1], 
+          Group_2 = group_labels[2],
+          Avg1 = 2^((AveExpr - (logFC/2)) - log2(eu_length/1000)),
+          Avg2 = 2^((AveExpr + (logFC/2)) - log2(eu_length/1000))
+        ) %>%
+        dplyr::select(
+          Test, Group_1, Group_2,
+          gene_id, logFC, logCPM=AveExpr, PValue=P.Value, FDR=adj.P.Val, 
+          Avg1, Avg2
+        )
+    )
+  }
+}
+
+
+# Iterate over a set of contrasts, generate DEG Tables and
+#  DEG Summary tables for each contrast. 
+iterate_edgeR_pairwise_contrasts <- function(
+  dge, fit, cntmat=cntmat, df=df, design=design,
+  deg=deg,respath="LIRTS_DEG_Analysis_results",
+  prefix="DBI"
+){
+  print(cntmat)
+  for (c in colnames(cntmat)) {             
+    # Run Exact Tests
+    pair<-c(
+      names(cntmat[,c])[cntmat[,c] == -1], 
+      names(cntmat[,c])[cntmat[,c] == 1]
+    )
+    print(pair)
+    
+    deg.et<-genPairwiseDegTable(dge, pair[1], pair[2], design)
+    deg.qt<-genPairwiseDegTable(fit, pair[1], pair[2], design)
+    
+    deg <- bind_rows(
+      deg,
+      deg.et %>%
+        mutate(Samples=prefix) %>%
+        tibble::remove_rownames(),
+      deg.qt %>%
+        mutate(Samples=prefix) %>%
+        tibble::remove_rownames()
+    )
+    
+    # Save DEG Tables
+    fn<-paste(
+      respath,"/",prefix,"_",c,"_Exact_Test_DEG.tsv", sep=""
+    )
+    write.table(
+      deg.et, fn, col.names =T, quote = F, sep="\t", row.names = F
+    )
+    
+    fn<-paste(
+      respath,"/",prefix,"_",c,"_QLFTest_DEG.tsv", sep=""
+    )
+    write.table(
+      deg.qt, fn, col.names=T, quote = F, sep="\t", row.names = F
+    )
+    
+    dg<-degSummary(                         # Generate Exact Test Summary tables
+      deg.et,
+      lfc = 'logFC',
+      fdr = 'FDR', 
+      Avg1 = pair[1],
+      Avg2 = pair[2]
+    )%>%
+      mutate(Samples=prefix)
+    
+    dg$contrast<-c
+    dg$test<-"Exact Test"
+    df<-bind_rows(df, dg)
+    
+    dg<-degSummary(                         # Generate QLF Test Summary tables 
+      deg.qt,
+      lfc = "logFC",
+      fdr = 'FDR', 
+      Avg1 = pair[1],
+      Avg2 = pair[2]
+    )%>%
+      mutate(Samples=prefix)
+    dg$contrast<-c
+    dg$test<-"QLFTest"
+    df<-bind_rows(df, dg)
+    
+  }
+  return(list(df, deg))
+}
+
+
+# Iterate over a set of design matrix coefficients, 
+# generate DEG Tables, DEG Summary tables
+iterate_edgeR_design_coefficients <- function(
+  dge, fit, coefs=c(2,3), df=df, design=design, deg=deg,
+  respath="LIRTS_DEG_Analysis_results", prefix="DBI", 
+  group_label_list=list(c("ctrl", "trt"), c("mut", "wt"))
+){
+  print(group_label_list)
+  for (c in 1:length(coefs)) {             
+    deg.qt<-genDesignCoefDegTable(
+      fit, design, coef=coefs[c], 
+      group_labels = group_label_list[[c]]
+    )
+    
+    deg <- bind_rows(
+      deg, deg.qt %>%
+        mutate(Partition=prefix) %>%
+        tibble::remove_rownames()
+    )
+    
+    # Save DEG Tables
+    fn<-paste(
+      respath,"/",prefix,"_",c,"_QLFTest_DEG.tsv", sep=""
+    )
+    write.table(
+      deg.qt, fn, col.names=T, quote = F, sep="\t", row.names = F
+    )
+    
+    dg<-degSummary(                         # Generate QLF Test Summary tables 
+      deg.qt,
+      lfc = "logFC",
+      fdr = 'FDR', 
+      Avg1 = "Avg1",
+      Avg2 = "Avg2"
+    )%>%
+      mutate(Samples=prefix)
+    dg$contrast<-colnames(design)[coefs[c]]
+    dg$test<-"QLFTest"
+    df<-bind_rows(df, dg)
+    
+  }
+  return(list(df, deg))
+}
+
+
