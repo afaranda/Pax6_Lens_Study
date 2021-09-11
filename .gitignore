@@ -2,3 +2,4 @@ results/*
 data/*
 *.Rdata
 .DS_Store
+*~$
