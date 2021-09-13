@@ -136,17 +136,16 @@ for (filt in c("geno", "ribo", "degnorm") ){
   
   # Construct and normalize all-sample DGEList object, fit QLF Model
   dge <- master[,master$samples$ribo_filter == filt ]
-  design <- model.matrix(~genotype * cell_type, dge$samples)
+  design <- model.matrix(~ cell_type * genotype, dge$samples)
   obj <- processByDesign(
     y=dge, design=design, 
     norm=ifelse(filt != "degnorm", "TMM", "NONE")
   )
   
-  
   pax6.deg_master <- iterate_edgeR_design_coefficients(
-    dge=obj$dge, fit=obj$fit, deg=pax6.deg_master,
+    dge=obj$dge, fit=obj$fit, deg=pax6.deg_master, filt=filt,
     design=design, respath = "results", prefix="2Way",
-    df=data.frame(), coefs=c(2:4), group_label_list = c(
+    df=data.frame(), coefs=c(2:4), group_label_list = list(
       c("Epi", "Fib"), c("WT", "P6"), c("WTEpi", "P6Fib")
     )
   )[[2]]
