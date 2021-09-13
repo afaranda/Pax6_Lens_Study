@@ -10,7 +10,7 @@
 library(edgeR)
 library(dplyr)
 library(ggplot2)
-setwd("~/Desktop/FCM_Methods_Paper_Analysis")
+library(pheatmap)
 wd<-getwd()
 ########  Wrapper function to fit a QLF model to a design matrix  ############
 processByDesign <- function(y, design, rob=T, norm="TMM"){
@@ -25,7 +25,102 @@ processByDesign <- function(y, design, rob=T, norm="TMM"){
   }
   
   fit <- glmQLFit(y, design, robust = rob)
-  return(list(dge=y, fit=fit))
+  return(list(dge=y, fit=fit, design=design))
+}
+############################ Plot Diagnostics ################################
+## Generate diagnostic plots. 
+diagnostic_plots <- function(
+  dge=dge, color_attrib="group", shape_attrib=NULL, 
+  respath="LIRTS_DEG_Analysis_results", prefix="DBI_Wildtype"
+){
+  # Colorblind friendly pallatte from 
+  # https://bconnelly.net/
+  
+  # colors=c(
+  #   "#000000", "#E69F00", "#56B4E9", "#009E73",
+  #   "#0072B2", "#D55E00", "#CC79A7"
+  # )
+  colors=c(
+    RColorBrewer::brewer.pal(9, name="RdYlBu")[1:3],
+    RColorBrewer::brewer.pal(9, name="RdYlBu")[7:9]
+  )[c(1,6,2,5,3,4)]
+  
+  pdf(
+    paste(
+      respath,"/",prefix,"_BCV_Plot.pdf", sep=""
+    ), height=6, width=6
+  )  
+  plotBCV(dge)                                              # BCV Plot
+  dev.off()
+  
+  # Plot sample projections in first two Principal Components
+  pca <-prcomp(t(cpm(dge, log=T)), scale=T)
+  fn <- paste(
+    respath,"/",prefix,"_PCA_Plot.png", sep=""
+  )
+  
+  if(is.null(color_attrib)){
+    ggsave(
+      fn,
+      autoplot(
+        pca, data=dge$samples,size=3
+      ), height =4, width=6
+    )
+  } else if(is.null(shape_attrib)){
+    ggsave(
+      fn,
+      autoplot(
+        pca, data=dge$samples,
+        colour=color_attrib, size=3
+      ) + scale_color_manual(values=colors), 
+      height =4, width=6
+    )
+  } else {
+    ggsave(
+      fn,
+      autoplot(
+        pca, data=dge$samples,
+        colour=color_attrib, shape=shape_attrib, size=3
+      ) + scale_color_manual(values=colors), 
+      height =4, width=6
+    )
+  }
+  
+  ## Plot sample correlation matrix (using all features)
+  
+  fpkm<-as.data.frame(                         ## store matrix of FPKM values
+    rpkm(
+      dge, gene.length="eu_length", 
+      log=T, normalized.lib.sizes = T
+    )
+  )
+  colnames(fpkm) <- dge$samples$label
+  
+  cm <- cor(fpkm, method = "spearman")
+  annot <- dge$samples[,c("label", color_attrib, shape_attrib)]
+  annot <- annot %>%
+    tibble::remove_rownames()%>%
+    tibble::column_to_rownames("label")
+  
+  annot_colors=list(
+    color_attrib=colors[1:length(levels(dge$samples[,color_attrib]))],
+    shape_attrib=colors[1:length(levels(dge$samples[,shape_attrib]))]
+  )
+  names(annot_colors$color_attrib)=levels(annot[,color_attrib])
+  names(annot_colors$shape_attrib)=levels(annot[,shape_attrib])
+  names(annot_colors) <- c(color_attrib, shape_attrib)
+  
+  pheatmap(
+    cm, annotation_col =annot,
+    annotation_colors = annot_colors,
+    filename = paste0(
+      "results/",
+      prefix, "_cormat.png"
+    ),height = 6, width=8
+  )
+  
+  
+  
 }
 
 ######## Split and Process DGE List based on a set of sample groups ##########
@@ -456,7 +551,8 @@ iterate_edgeR_pairwise_contrasts <- function(
 iterate_edgeR_design_coefficients <- function(
   dge, fit, coefs=c(2,3), df=df, design=design, deg=deg,
   respath="LIRTS_DEG_Analysis_results", prefix="DBI", 
-  group_label_list=list(c("ctrl", "trt"), c("mut", "wt"))
+  group_label_list=list(c("ctrl", "trt"), c("mut", "wt")),
+  filt="NONE"
 ){
   print(group_label_list)
   for (c in 1:length(coefs)) {             
@@ -467,7 +563,10 @@ iterate_edgeR_design_coefficients <- function(
     
     deg <- bind_rows(
       deg, deg.qt %>%
-        mutate(Partition=prefix) %>%
+        mutate(
+          Filtered= filt,
+          Partition=prefix
+        ) %>%
         tibble::remove_rownames()
     )
     
@@ -493,6 +592,78 @@ iterate_edgeR_design_coefficients <- function(
     
   }
   return(list(df, deg))
+}
+
+################### Extract 
+process_selected_features <- function(
+  dge, design, genes=NULL, counts=NULL, 
+  prefix="Global_Wildtype_Top_Genes",
+  color_attrib="hours_pcs", 
+  shape_attrib = "batch"
+){
+  
+  # colors=c(
+  #   "#000000", "#E69F00", "#56B4E9", "#009E73",
+  #   "#0072B2", "#D55E00", "#CC79A7"
+  # )
+  colors=c(
+    RColorBrewer::brewer.pal(9, name="RdYlBu")[1:3],
+    RColorBrewer::brewer.pal(9, name="RdYlBu")[7:9]
+  )
+  
+  
+  if(!is.null(counts)){
+    dge$counts <- counts
+  }
+  obj <- process_edgeR_ByDesign(y=dge, genes=genes, design=design)
+  diagnostic_plots(
+    obj$dge, prefix = prefix, 
+    color_attrib = color_attrib,
+    shape_attrib = shape_attrib
+  )
+  fpkm<-as.data.frame(
+    rpkm(
+      obj$dge, gene.length="eu_length", log=T,
+      normalized.lib.sizes = T
+    )
+  )
+  colnames(fpkm) <- obj$dge$samples$label
+  
+  ## Plot samplewise correlation matrix after excluding genes with 
+  ## a strong batch response (DBI vs DNA1, DNA2 or DNA3)
+  cm <- cor(fpkm, method = "spearman")
+  annot <- obj$dge$samples[,c("hours_pcs", "batch", "label")]
+  annot <- annot %>%
+    tibble::remove_rownames()%>%
+    tibble::column_to_rownames("label")
+  
+  annot_colors=list(
+    hours_pcs=colors[1:6],
+    batch=colors[2:5]
+  )
+  names(annot_colors$hours_pcs)=levels(annot$hours_pcs)
+  names(annot_colors$batch)=levels(annot$batch)
+  
+  pheatmap(
+    cm, annotation_col =annot,
+    annotation_colors = annot_colors,
+    filename = paste0(
+      "LIRTS_DEG_Analysis_results/",
+      prefix, "_cormat.png"
+    ),height = 6, width=8
+  )
+  
+  ## Save FPKM matrix for genes with a significant batch dependent logFC
+  ## less than 2 (four fold difference) (DBI vs DNA1, DNA2 or DNA3)
+  fpkm<-tibble::rownames_to_column(fpkm,"gene_id")
+  write.csv(
+    fpkm, row.names = F, quote = F,
+    paste0(
+      "LIRTS_DEG_Analysis_results/",
+      prefix,"_TMM-FPKM_Matrix.csv"
+    )
+  )
+  return(obj)
 }
 
 

@@ -20,7 +20,7 @@ if(file.exists("data/pax6_master_dgelists.Rdata")){
 }
 source("scripts/Overlap_Comparison_Functions.R")
 source("scripts/Wrap_edgeR_Functions.R")
-source("scripts/PrincipalComponents.R")
+#source("scripts/PrincipalComponents.R")
 
 pax6.deg_master<-data.frame()       # Empty data frame to store all DEG results
 
@@ -43,21 +43,22 @@ for ( filt in levels(pax6.master$samples$ribo_filter)){
     dge, groups=as.character(dge$samples$group),
     norm=ifelse(filt=="degnorm", "NONE", "TMM")
   )
-  pax6.disp_master <- data.frame(
-      Partition = "All",
-      Filtered = filt,
-      Contrast = "Multiple",
-      Disp = set[["dge"]]$common.dispersion
-    )
+ 
+  diagnostic_plots(
+    set$dge, color_attrib = "genotype",
+    shape_attrib = "cell_type",
+    respath = "results", prefix = paste0("All_",filt=filt)
+    
+  )
    
   dge$samples$sample <- row.names(dge$samples)
-  ggsave(
-    filename = "results/P6D_All_Sample_PCA.jpg",
-    plotPrinComp(
-      cpm(dge, log=T), ft=dge$samples,idCol = 0,
-      groupCol = "group",
-    ), width=4, height=3
-  )
+  # ggsave(
+  #   filename = "results/P6D_All_Sample_PCA.jpg",
+  #   plotPrinComp(
+  #     cpm(dge, log=T), ft=dge$samples,idCol = 0,
+  #     groupCol = "group",
+  #   ), width=4, height=3
+  # )
   for(                              # Iterate over relevant contrasts
     cn in list(
       c("WTE", "WTF"),
@@ -75,6 +76,15 @@ for ( filt in levels(pax6.master$samples$ribo_filter)){
       ) %>% tibble::remove_rownames()
     }
   }
+  
+  # Run 2 Way interaction models
+  pax6.deg_master <- iterate_edgeR_design_coefficients(
+    dge=set$dge, fit=set$fit, deg=pax6.deg_master, filt=filt,
+    design=design, respath = "results", prefix="2Way",
+    df=data.frame(), coefs=c(2:4), group_label_list = list(
+      c("Epi", "Fib"), c("WT", "P6"), c("WTEpi", "P6Fib")
+    )
+  )[[2]]
 }
 
 #### Generate DEG Tables over all contrasts, Pairwise Partitions #####
@@ -106,16 +116,7 @@ for (filt in c("geno", "ribo", "degnorm") ){
       dge, groups=c(cn[1], cn[2]),
       norm=ifelse(filt=="degnorm", "NONE", "TMM")
     )
-    pax6.disp_master <- bind_rows(
-      pax6.disp_master,
-      data.frame(
-        Partition = "Pair",
-        Filtered = filt,
-        Contrast = paste0(cn[2], "v", cn[1]),
-        Disp = set[["dge"]]$common.dispersion
-      )
-    )    
-    
+
     for(i in c("dge", "fit")){
       pax6.deg_master <- bind_rows(
         pax6.deg_master, 
@@ -138,8 +139,15 @@ for (filt in c("geno", "ribo", "degnorm") ){
   dge <- master[,master$samples$ribo_filter == filt ]
   design <- model.matrix(~ cell_type * genotype, dge$samples)
   obj <- processByDesign(
-    y=dge, design=design, 
+    y=dge, design=design,
     norm=ifelse(filt != "degnorm", "TMM", "NONE")
+  )
+  
+  diagnostic_plots(
+    obj$dge, color_attrib = "genotype",
+    shape_attrib = "cell_type",
+    respath = "results", prefix = paste0("2Way_",filt=filt)
+    
   )
   
   pax6.deg_master <- iterate_edgeR_design_coefficients(
