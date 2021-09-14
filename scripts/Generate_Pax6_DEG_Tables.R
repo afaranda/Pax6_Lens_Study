@@ -6,23 +6,49 @@
 #                                                                            #
 ##############################################################################
 
-#########      Load Libraries and import expression data          ############
+#########        Load Libraries and setup environment            ############
 library(edgeR)
 library(dplyr)
 library(ggplot2)
+library(synapser)
+source("scripts/Overlap_Comparison_Functions.R")
+source("scripts/Wrap_edgeR_Functions.R")
+
+
 setwd("~/Documents/11Sep2021_Pax6_Study_DEG_Analysis")
 wd<-getwd()
 data_dir="data"
+
+# Get Synapse ID's
+synLogin()
+syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
+syn_code_dir <- synFindEntityId("code", parent=syn_project)
+syn_data_dir <- synFindEntityId("data", parent=syn_project)
+syn_deg_dir <- synFindEntityId("DEG_Tables", parent = syn_project)
+syn_dgelists <- synFindEntityId(
+  "pax6_master_dgelists.Rdata", 
+  parent=syn_data_dir
+)
+
+# Import Local DGElists or fetch from Synapse
 if(file.exists("data/pax6_master_dgelists.Rdata")){
   load("data/pax6_master_dgelists.Rdata")
-} else {
+} else if(!is.null(syn_dgelists)){
+  synGet(
+    syn_dgelists, downloadLocation=data_dir
+  )
+  load("data/pax6_master_dgelists.Rdata")
+}else{
   source("scripts/Prepare_Expression_DGELists.R")
+  syn_dgelists <- synFindEntityId(
+    "pax6_master_dgelists.Rdata", 
+    parent=syn_data_dir
+  )
 }
-source("scripts/Overlap_Comparison_Functions.R")
-source("scripts/Wrap_edgeR_Functions.R")
-#source("scripts/PrincipalComponents.R")
 
 pax6.deg_master<-data.frame()       # Empty data frame to store all DEG results
+
+
 
 ########          Generate DEG Tables over All Genomic contrasts         #####
 for ( filt in levels(pax6.master$samples$ribo_filter)){
@@ -164,5 +190,27 @@ save(
   file="results/pax6_deg_tables.Rdata"
 )
 
+######################  Push script and data to Synapse ######################
+script_path <- "scripts/Generate_Pax6_DEG_Tables.R"
+deg_table_path <- "results/pax6_deg_tables.Rdata"
+syn_script <- File(
+  path=script_path,
+  parent=syn_figures_dir
+)
+
+syn_script <- synStore(
+  syn_script,
+  used = syn_dgelists
+)
+
+syn_deg_tables <- File(
+  path=deg_table_path,
+  parent=syn_deg_dir
+)
+
+syn_deg_tables <- synStore(
+  syn_deg_tables,
+  executed = syn_script
+)
 
 

@@ -33,6 +33,19 @@ if(!"ENTREZID" %in% names(lt)){
   write.csv(lt, fn)
 } 
 
+
+# Get Synapse ID's
+synLogin()
+syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
+syn_code_dir <- synFindEntityId("code", parent=syn_project)
+syn_data_dir <- synFindEntityId("data", parent=syn_project)
+# syn_deg_dir <- synFindEntityId("DEG_Tables", parent = syn_project)
+# syn_dgelists <- synFindEntityId(
+#   "pax6_master_dgelists.Rdata", 
+#   parent=syn_data_dir
+# )
+
+
 ##############################################################################
 #                        Create DGEList for Pax6 Study                       #
 ##############################################################################
@@ -103,6 +116,18 @@ pax6.master.dgn <- DGEList(
   samples=samples
 )
 colnames(pax6.master.dgn) <- pax6.master.dgn$samples$label
+
+### Save counts and DI's extracted from the DegNorm results object
+write.csv(
+  counts,
+  file=paste0(data_dir,"/","Pax6_Lens_DegNorm_Counts.csv")
+)
+
+write.csv(
+  degnorm_results$DI,
+  file=paste0(data_dir,"/","Pax6_Lens_DegNorm_DI.csv")
+)
+
 rm(degnorm_results)
 
 ## Create DGEList Objects
@@ -110,3 +135,51 @@ save(
   list=c("pax6.master", "pax6.master.dgn"), 
   file="data/pax6_master_dgelists.Rdata"
 )
+
+######################  Push script and data to Synapse ######################
+script_path <- "scripts/Prepare_Expression_DGELists.R"
+dgelists_path <- "results/pax6_master_dgelists.Rdata"
+
+### Upload Count Files and DegNorm Counts / DI Matrices
+### used bythis script
+syn_count_files <- list()
+for(f in c(
+  list.files(data_dir, pattern="_GeneCount.txt"),
+  "Pax6_Lens_DegNorm_Counts.csv",
+  "Pax6_Lens_DegNorm_DI.csv")
+){
+  count_file <- File(
+    path=paste0(data_dir,"/",f),
+    parent=syn_data_dir
+  )
+  syn_count_files <- append(
+    syn_count_files,
+    synStore(
+      count_file
+    )
+  )
+}
+
+## Upload this script
+syn_script <- File(
+  path=script_path,
+  parent=syn_code_dir_dir
+)
+
+syn_script <- synStore(
+  syn_script,
+  used = syn_count_files
+)
+
+## Upload this script's results
+syn_dgelists <- File(
+  path=dgelists_path,
+  parent=syn_deg_dir
+)
+
+syn_dgelists <- synStore(
+  syn_dgelists,
+  executed = syn_script
+)
+
+
