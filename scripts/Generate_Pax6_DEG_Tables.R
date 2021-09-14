@@ -78,13 +78,6 @@ for ( filt in levels(pax6.master$samples$ribo_filter)){
   )
    
   dge$samples$sample <- row.names(dge$samples)
-  # ggsave(
-  #   filename = "results/P6D_All_Sample_PCA.jpg",
-  #   plotPrinComp(
-  #     cpm(dge, log=T), ft=dge$samples,idCol = 0,
-  #     groupCol = "group",
-  #   ), width=4, height=3
-  # )
   for(                              # Iterate over relevant contrasts
     cn in list(
       c("WTE", "WTF"),
@@ -103,14 +96,14 @@ for ( filt in levels(pax6.master$samples$ribo_filter)){
     }
   }
   
-  # Run 2 Way interaction models
-  pax6.deg_master <- iterate_edgeR_design_coefficients(
-    dge=set$dge, fit=set$fit, deg=pax6.deg_master, filt=filt,
-    design=design, respath = "results", prefix="2Way",
-    df=data.frame(), coefs=c(2:4), group_label_list = list(
-      c("Epi", "Fib"), c("WT", "P6"), c("WTEpi", "P6Fib")
-    )
-  )[[2]]
+  # # Run 2 Way interaction models
+  # pax6.deg_master <- iterate_edgeR_design_coefficients(
+  #   dge=set$dge, fit=set$fit, deg=pax6.deg_master, filt=filt,
+  #   design=design, respath = "results", prefix="2Way",
+  #   df=data.frame(), coefs=c(2:4), group_label_list = list(
+  #     c("Epi", "Fib"), c("WT", "P6"), c("WTEpi", "P6Fib")
+  #   )
+  # )[[2]]
 }
 
 #### Generate DEG Tables over all contrasts, Pairwise Partitions #####
@@ -195,7 +188,7 @@ script_path <- "scripts/Generate_Pax6_DEG_Tables.R"
 deg_table_path <- "results/pax6_deg_tables.Rdata"
 syn_script <- File(
   path=script_path,
-  parent=syn_figures_dir
+  parent=syn_code_dir
 )
 
 syn_script <- synStore(

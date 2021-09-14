@@ -138,7 +138,7 @@ save(
 
 ######################  Push script and data to Synapse ######################
 script_path <- "scripts/Prepare_Expression_DGELists.R"
-dgelists_path <- "results/pax6_master_dgelists.Rdata"
+dgelists_path <- "data/pax6_master_dgelists.Rdata"
 
 ### Upload Count Files and DegNorm Counts / DI Matrices
 ### used bythis script
@@ -163,7 +163,7 @@ for(f in c(
 ## Upload this script
 syn_script <- File(
   path=script_path,
-  parent=syn_code_dir_dir
+  parent=syn_code_dir
 )
 
 syn_script <- synStore(
@@ -174,7 +174,7 @@ syn_script <- synStore(
 ## Upload this script's results
 syn_dgelists <- File(
   path=dgelists_path,
-  parent=syn_deg_dir
+  parent=syn_data_dir
 )
 
 syn_dgelists <- synStore(

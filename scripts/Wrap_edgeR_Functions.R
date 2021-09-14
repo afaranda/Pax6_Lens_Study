@@ -10,6 +10,7 @@
 library(edgeR)
 library(dplyr)
 library(ggplot2)
+library(ggfortify)
 library(pheatmap)
 wd<-getwd()
 ########  Wrapper function to fit a QLF model to a design matrix  ############
