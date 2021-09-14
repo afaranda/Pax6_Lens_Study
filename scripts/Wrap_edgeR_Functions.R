@@ -594,10 +594,11 @@ iterate_edgeR_design_coefficients <- function(
   return(list(df, deg))
 }
 
-################### Extract 
+################ Extract FPKM Matrix for Features of interest ################
 process_selected_features <- function(
   dge, design, genes=NULL, counts=NULL, 
   prefix="Global_Wildtype_Top_Genes",
+  respath="results/",
   color_attrib="hours_pcs", 
   shape_attrib = "batch"
 ){
@@ -609,7 +610,7 @@ process_selected_features <- function(
   colors=c(
     RColorBrewer::brewer.pal(9, name="RdYlBu")[1:3],
     RColorBrewer::brewer.pal(9, name="RdYlBu")[7:9]
-  )
+  )[c(1,6,2,5,3,4)]
   
   
   if(!is.null(counts)){
@@ -648,8 +649,7 @@ process_selected_features <- function(
     cm, annotation_col =annot,
     annotation_colors = annot_colors,
     filename = paste0(
-      "LIRTS_DEG_Analysis_results/",
-      prefix, "_cormat.png"
+      respath, prefix, "_cormat.png"
     ),height = 6, width=8
   )
   
