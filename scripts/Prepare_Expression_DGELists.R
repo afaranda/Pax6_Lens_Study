@@ -58,8 +58,8 @@ samples<-data.frame(file=list.files(data_dir, pattern="GeneCount"))%>%
         levels = c("WT", "P6")
     ),
     cell_type = factor(
-      ifelse(grepl("LE", file), "Epi", "Fib"),
-      levels = c("Epi", "Fib")
+      ifelse(grepl("LE", file), "E", "F"),
+      levels = c("E", "F")
     ),
     ribo_filter = factor(
       ifelse(grepl("_rf_", file), "ribo", "geno"),
@@ -69,9 +69,9 @@ samples<-data.frame(file=list.files(data_dir, pattern="GeneCount"))%>%
   group_by(genotype, cell_type, ribo_filter) %>%
   mutate(
     sample=paste(
-      genotype, cell_type, 
-      ribo_filter, row_number(), 
-      sep="_")
+      genotype, cell_type,"_", 
+      ribo_filter,"_", row_number(), 
+      sep="")
   ) %>% 
   arrange(ribo_filter, cell_type, genotype) %>%
   as.data.frame() %>%

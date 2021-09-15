@@ -173,7 +173,7 @@ for (filt in c("geno", "ribo", "degnorm") ){
     dge=obj$dge, fit=obj$fit, deg=pax6.deg_master, filt=filt,
     design=design, respath = "results", prefix="2Way",
     df=data.frame(), coefs=c(2:4), group_label_list = list(
-      c("Epi", "Fib"), c("WT", "P6"), c("WTEpi", "P6Fib")
+      c("Epi", "Fib"), c("WT", "P6"), c("REF", "INX")
     )
   )[[2]]
 }
