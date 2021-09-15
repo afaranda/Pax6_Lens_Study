@@ -407,7 +407,8 @@ for(c in names(contrasts)){
             master$genes %>% 
               select(
                 -pl_length, -pl_gc, -is_principal,
-                -GENEBIOTYPE, -tx_id, -gene_id_version
+                -GENEBIOTYPE, -tx_id, -gene_id_version,
+                -ENTREZID
               ), by="gene_id"
           ) %>% 
           relocate(
