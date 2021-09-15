@@ -125,11 +125,12 @@ if(file.exists('data/pax6_master_dgelists.Rdata')){
   )
   load('data/pax6_master_dgelists.Rdata')
 }else{
-  source("scripts/Prepare_Expression_DGELists.R")
-  syn_dgelists <- synFindEntityId(
-    "pax6_master_dgelists.Rdata", 
-    parent=syn_data_dir
-  )
+  # source("scripts/Prepare_Expression_DGELists.R")
+  # syn_dgelists <- synFindEntityId(
+  #   "pax6_master_dgelists.Rdata", 
+  #   parent=syn_data_dir
+  # )
+  stop("Run Generate_Pax6_DEG_Tables.R first")
 }
 
 ## Get Ribo Filtered Counts
@@ -167,11 +168,12 @@ if(file.exists("results/pax6_deg_tables.Rdata")){
   )
   load("results/pax6_deg_tables.Rdata")
 }else{
-  source("scripts/Generate_Pax6_DEG_Tables.R")
-  syn_deg_master <- synFindEntityId(
-    "pax6_deg_tables.Rdata", 
-    parent=syn_deg_tbl_dir
-  )
+  # source("scripts/Generate_Pax6_DEG_Tables.R")
+  # syn_deg_master <- synFindEntityId(
+  #   "pax6_deg_tables.Rdata", 
+  #   parent=syn_deg_tbl_dir
+  # )
+  stop("Run Generate_Pax6_DEG_Tables.R first")
 }
 
 #####################  Setup group and contrast iterators ####################
@@ -386,7 +388,7 @@ for(c in names(contrasts)){
       dg1.x = 23,                      # row number, corner of dg1 Summary table
       dg1.y = 2,                       # col number, corner of dg1 Summary table
       dg1.ds = contrast_descriptions[[c]], # short description for contrast C1 (dg1)
-      template = "scripts/deg_template.xlsx",
+      template = template,
       descPageName="Data Description", # Name of sheet to write summary tables
       wb = NULL,                       # Optionally pass a workbook object instead.
       pref = "" ,                      # Prefix for output file.
