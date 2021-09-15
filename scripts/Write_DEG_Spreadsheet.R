@@ -253,10 +253,12 @@ for(c in names(contrasts)){
     master <- pax6.master.dgn
     deg <- pax6.deg_master %>% 
       filter(Filtered == "degnorm")
+    filt <- "degnorm"
   } else {
     master <- pax6.master
     deg <- pax6.deg_master %>% 
       filter(Filtered == "ribo")
+    filt <- "ribo"
   }
   
   
@@ -287,11 +289,11 @@ for(c in names(contrasts)){
     
     ## Get names of length and GC Bias Plots
     gcfn<-paste0(
-      "results/LGB_ribo_Pair_ExactTest_",g2,"v",g1,
+      "results/LGB_",filt,"_Pair_ExactTest_",g2,"v",g1,
       "_Stat_GC_Bias_By_Partition.jpg"
     )
     lnfn<-paste0(
-      "results/LGB_ribo_Pair_ExactTest_",g2,"v",g1,
+      "results/LGB_",filt,"_Pair_ExactTest_",g2,"v",g1,
       "_Stat_Length_Bias_By_Partition.jpg"
     )
     
@@ -303,11 +305,11 @@ for(c in names(contrasts)){
     gr <- colnames(master)
     ## Get names of length and GC Bias Plots
     gcfn<-paste0(
-      "results/LGB_ribo_2Way_QLFTest_",g2,"v",g1,
+      "results/LGB_",filt,"_2Way_QLFTest_",g2,"v",g1,
       "_Stat_GC_Bias_By_Partition.jpg"
     )
     lnfn<-paste0(
-      "results/LGB_ribo_2Way_QLFTest_",g2,"v",g1,
+      "results/LGB_",filt,"_2Way_QLFTest_",g2,"v",g1,
       "_Stat_Length_Bias_By_Partition.jpg"
     )
     
