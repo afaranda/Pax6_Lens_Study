@@ -298,7 +298,7 @@ for(c in names(contrasts)){
     )
     
     ## Get template for building this spreadsheet
-    template<-paste0("scripts/",c,"_Pairwise_Exact_Test_deg_template.xlsx")
+    template<-paste0("templates/",c,"_Pairwise_Exact_Test_deg_template.xlsx")
     print(template)
     print(file.exists(template))
   } else {
@@ -329,7 +329,7 @@ for(c in names(contrasts)){
     print(nrow(degSet))
     
     ## Get template for building this spreadsheet
-    template<-paste0("scripts/",c,"_QLF_Interaction_Model_deg_template.xlsx")
+    template<-paste0("templates/",c,"_QLF_Interaction_Model_deg_template.xlsx")
     print(template)
     print(file.exists(template))
   }   
