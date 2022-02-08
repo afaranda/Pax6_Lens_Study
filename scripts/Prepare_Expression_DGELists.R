@@ -4,7 +4,7 @@
 #  Purpose: Import expression measurements and generate DGEList opjects      #
 #  Created: Feb 2, 2021                                                      #
 #  Author:  Adam Faranda                                                     #
-#                                                                            #  
+#                                                                            #
 ##############################################################################
 
 # Load libraries, set working directory
