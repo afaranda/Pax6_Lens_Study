@@ -19,6 +19,7 @@ options(echo=T)
 # Enter Working Directory and Load Raw Data
 setwd('/Users/adam/Documents/11Sep2021_Pax6_Study_DEG_Analysis/')
 source('scripts/Overlap_Comparison_Functions.R')
+source('scripts/Wrap_edgeR_Functions.R')
 wd<-getwd()
 results<-paste(wd,'results/Pax6_Targets',sep='/')
 if(!dir.exists(results)){
@@ -87,6 +88,9 @@ pax6.master.dgn$samples$label <- gsub(
   "_degnorm", "", pax6.master.dgn$samples$label
 )
 colnames(pax6.master.dgn) <- pax6.master.dgn$samples$label
+
+## Define design matrix for interaction model. 
+design <- model.matrix(~ cell_type * genotype, pax6.master$samples)
 
 ######################### Load in Master DEG Table ###########################
 syn_deg_master <- synFindEntityId(
@@ -284,7 +288,13 @@ for(c in names(contrasts)){
     
   } else {
     gr <- colnames(master)
-
+    
+    obj <- processByDesign(
+      y=master, design=design,
+      norm=ifelse(filt != "degnorm", "TMM", "NONE")
+    )
+    
+    
     ## Subset DEG Table from pax6.deg_master
     degSet <- deg %>%
       filter(
@@ -294,7 +304,11 @@ for(c in names(contrasts)){
           Group_2 == g2
       ) %>%
       inner_join(
-        master$genes,
+        obj$dge$genes %>%
+          select(
+            gene_id, SYMBOL,
+            matches("FPKM")
+          ),
         by="gene_id"
       )
     
