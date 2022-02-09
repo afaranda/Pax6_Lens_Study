@@ -327,7 +327,7 @@ for(c in names(contrasts)){
   degSet <- degSet %>%
     mutate(
       IS_DEG = (
-        abs(logFC) > 1 & FDR < 0.05 
+        abs(logFC) > 1 & FDR < 0.05
       ),
       IS_BIO = (
         abs(logFC) > 1 & FDR < 0.05 & 
@@ -375,6 +375,35 @@ for(c in names(contrasts)){
    contingency,alternative = "greater"
   ) %>% print()
   
+  print("Statistically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_targets$Target),
+      IS_DEG = IS_DEG & logFC > 1
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Statistically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_targets$Target),
+      IS_DEG = IS_DEG & logFC < -1
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  
   print("Biologically Significant")
   print(c)
   contingency <- degSet %>%
@@ -388,6 +417,35 @@ for(c in names(contrasts)){
     contingency,alternative = "greater"
   ) %>% print()
   sink()
+  
+  print("Biologically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_targets$Target),
+      IS_BIO = IS_BIO & logFC > 1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Biologically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_targets$Target),
+      IS_BIO = IS_BIO & logFC < -1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
   
   #### Tabulate Targets Recognized by TRRUST
   deg_trrust_targets <- inner_join(
@@ -422,11 +480,67 @@ for(c in names(contrasts)){
     contingency,alternative = "greater"
   ) %>% print()
   
+  print("Statistically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_DEG = IS_DEG & logFC > 1
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Statistically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_DEG = IS_DEG & logFC < -1
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
   print("Biologically Significant")
   print(c)
   contingency <- degSet %>%
     mutate(
       IS_PAX6 = (SYMBOL %in% trrust_targets$Target)
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Biologically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_BIO = IS_BIO & logFC > 1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Biologically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_BIO = IS_BIO & logFC < -1
     ) %>%
     select( IS_BIO, IS_PAX6) %>% table()
   
@@ -482,6 +596,35 @@ for(c in names(contrasts)){
   fisher.test(
     contingency,alternative = "greater"
   ) %>% print()
+  
+  print("Biologically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% combined_targets$Target),
+      IS_BIO = IS_BIO & logFC > 1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Biologically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% combined_targets$Target),
+      IS_BIO = IS_BIO & logFC < -1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
   sink()
 }
 
@@ -532,7 +675,7 @@ combined_targets %>%
 
 ## Write Combination By Genotype Table
 fn<-paste0(
-  "P6T_",c,"_Combined_Targets_Differentiation_By_Genotype.csv"
+  "P6T_Combined_Targets_Differentiation_By_Genotype.csv"
 )
 path<-paste(results, fn, sep="/")
 write.csv(
@@ -541,7 +684,7 @@ write.csv(
 result_files <- append(result_files, path)
 
 fn<-paste0(
-  "P6T_",c,"_Combined_Targets_Upregulation_Defect.csv"
+  "P6T_Combined_Targets_Upregulation_Defect.csv"
 )
 path<-paste(results, fn, sep="/")
 write.csv(
@@ -554,7 +697,7 @@ write.csv(
 result_files <- append(result_files, path)
 
 fn<-paste0(
-  "P6T_",c,"_Combined_Targets_Downregulation_Defect.csv"
+  "P6T_Combined_Targets_Downregulation_Defect.csv"
 )
 path<-paste(results, fn, sep="/")
 write.csv(
