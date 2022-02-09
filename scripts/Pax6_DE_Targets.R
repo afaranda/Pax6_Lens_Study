@@ -74,6 +74,10 @@ pax6.master$samples$group <- factor(
   levels=c("WTE", "WTF", "P6E", "P6F")
 ) 
 
+pax6.master$genes$DESCRIPTION <- gsub(
+  " \\[.*\\]", "", pax6.master$genes$DESCRIPTION
+)
+
 # Drop unfiltered counts
 pax6.master <- pax6.master[,which(pax6.master$samples$ribo_filter=="ribo")]
 pax6.master$samples$label <- gsub("_ribo", "", pax6.master$samples$label)
@@ -88,6 +92,10 @@ pax6.master.dgn$samples$label <- gsub(
   "_degnorm", "", pax6.master.dgn$samples$label
 )
 colnames(pax6.master.dgn) <- pax6.master.dgn$samples$label
+
+pax6.master.dgn$genes$DESCRIPTION <- gsub(
+  " \\[.*\\]", "", pax6.master.dgn$genes$DESCRIPTION
+)
 
 ## Define design matrix for interaction model. 
 design <- model.matrix(~ cell_type * genotype, pax6.master$samples)
@@ -319,9 +327,7 @@ for(c in names(contrasts)){
   degSet <- degSet %>%
     mutate(
       IS_DEG = (
-        abs(logFC) > 1 & FDR < 0.05 & 
-          (Avg1 > 2 | Avg2 > 2) & 
-          (abs(Avg1 - Avg2)>2)
+        abs(logFC) > 1 & FDR < 0.05 
       ),
       IS_BIO = (
         abs(logFC) > 1 & FDR < 0.05 & 
@@ -490,7 +496,7 @@ combined_targets %>%
       ) %>%
       inner_join(
         master$genes %>%
-          select(gene_id, SYMBOL),
+          select(gene_id, SYMBOL, DESCRIPTION),
         by="gene_id"
       ) %>%
       select(
@@ -526,17 +532,39 @@ combined_targets %>%
 
 ## Write Combination By Genotype Table
 fn<-paste0(
-  "P6T_",c,"_Combined_Targets_Differentiation_Defect.csv"
+  "P6T_",c,"_Combined_Targets_Differentiation_By_Genotype.csv"
+)
+path<-paste(results, fn, sep="/")
+write.csv(
+  deg_combined_by_genotype, file=path, row.names = F
+)
+result_files <- append(result_files, path)
+
+fn<-paste0(
+  "P6T_",c,"_Combined_Targets_Upregulation_Defect.csv"
 )
 path<-paste(results, fn, sep="/")
 write.csv(
   deg_combined_by_genotype %>%
     filter(
-      abs(WTF_vs_WTE_LogFC) > 1 &
-        abs(P6F_vs_P6E_LogFC) <=1
+      WTF_vs_WTE_LogFC  > 1 &
+        WTF_vs_WTE_FDR < 0.05 &
+        P6F_vs_P6E_LogFC <= 1
     ), file=path, row.names = F)
 result_files <- append(result_files, path)
 
+fn<-paste0(
+  "P6T_",c,"_Combined_Targets_Downregulation_Defect.csv"
+)
+path<-paste(results, fn, sep="/")
+write.csv(
+  deg_combined_by_genotype %>%
+    filter(
+      WTF_vs_WTE_LogFC  < -1 &
+        WTF_vs_WTE_FDR < 0.05 &
+        P6F_vs_P6E_LogFC >= -1
+    ), file=path, row.names = F)
+result_files <- append(result_files, path)
 
 
 
@@ -589,4 +617,3 @@ for(file in result_files){
     syn_act
   )
 }
-
