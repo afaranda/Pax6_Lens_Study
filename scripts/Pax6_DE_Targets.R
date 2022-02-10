@@ -396,7 +396,7 @@ for(c in names(contrasts)){
       IS_PAX6 = (SYMBOL %in% sun_targets$Target),
       IS_DEG = IS_DEG & logFC < -1
     ) %>%
-    select( IS_DEG, IS_PAX6) %>% table()
+    select(IS_DEG, IS_PAX6) %>% table()
   
   print(contingency)
   fisher.test(
