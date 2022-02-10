@@ -416,7 +416,6 @@ for(c in names(contrasts)){
   fisher.test(
     contingency,alternative = "greater"
   ) %>% print()
-  sink()
   
   print("Biologically Positive")
   print(c)
@@ -446,6 +445,7 @@ for(c in names(contrasts)){
     contingency,alternative = "greater"
   ) %>% print()
   
+  sink()
   
   #### Tabulate Targets Recognized by TRRUST
   deg_trrust_targets <- inner_join(
@@ -461,7 +461,7 @@ for(c in names(contrasts)){
   write.csv(deg_trrust_targets, file=path, row.names = F)
   result_files <- append(result_files, path)
   
-  ## Run Enrichment tests on Sun_2015 Targets
+  ## Run Enrichment tests on TRRUST Targets
   fn<-paste0("P6T_",c,"_TRRUST_Target_Enrichment.txt")
   path<-paste(results, fn, sep="/")
   result_files <- append(result_files, path)
@@ -576,6 +576,34 @@ for(c in names(contrasts)){
   contingency <- degSet %>%
     mutate(
       IS_PAX6 = (SYMBOL %in% combined_targets$Target)
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Statistically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_DEG = IS_DEG & logFC > 1
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "greater"
+  ) %>% print()
+  
+  print("Statistically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_DEG = IS_DEG & logFC < -1
     ) %>%
     select( IS_DEG, IS_PAX6) %>% table()
   
