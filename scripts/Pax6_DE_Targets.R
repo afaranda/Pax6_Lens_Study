@@ -588,7 +588,7 @@ for(c in names(contrasts)){
   print(c)
   contingency <- degSet %>%
     mutate(
-      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_PAX6 = (SYMBOL %in% combined_targets$Target),
       IS_DEG = IS_DEG & logFC > 1
     ) %>%
     select( IS_DEG, IS_PAX6) %>% table()
@@ -602,7 +602,7 @@ for(c in names(contrasts)){
   print(c)
   contingency <- degSet %>%
     mutate(
-      IS_PAX6 = (SYMBOL %in% trrust_targets$Target),
+      IS_PAX6 = (SYMBOL %in% combined_targets$Target),
       IS_DEG = IS_DEG & logFC < -1
     ) %>%
     select( IS_DEG, IS_PAX6) %>% table()
