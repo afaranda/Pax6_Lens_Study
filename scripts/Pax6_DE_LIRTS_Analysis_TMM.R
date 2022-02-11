@@ -131,7 +131,7 @@ syn_dgelists <- synFindEntityId(
 )
 
 if(file.exists('data/LIRTS_master_dgelist.Rdata')){
-  load('data/pax6_master_dgelists.Rdata')
+  load('data/LIRTS_master_dgelist.Rdata')
 } else if(!is.null(syn_dgelists)){
   synGet(
     syn_dgelists, downloadLocation=data_dir
@@ -419,7 +419,9 @@ data.frame(
 ) %>% 
   left_join(
     pax6_injury_deg_table %>% 
-      select(gene_id, SYMBOL, matches("^pax6")) %>%
+      select(
+        gene_id, SYMBOL, DESCRIPTION, PAX6_TARGET,
+        matches("^pax6", ignore.case=F)) %>%
       distinct(), 
     by="gene_id"
   ) %>%
@@ -448,7 +450,7 @@ data.frame(
         values_fill = "Not Observed"
       ),
     by="gene_id"
-  ) %>% write.csv(path)
+  ) %>% View() #write.csv(path)
 
 
 ######################  Push script and data to Synapse ######################
