@@ -103,9 +103,6 @@ pax6.master.dgn$genes$DESCRIPTION <- gsub(
   " \\[.*\\]", "", pax6.master.dgn$genes$DESCRIPTION
 )
 
-## Define design matrix for interaction model. 
-design <- model.matrix(~ cell_type * genotype, pax6.master$samples)
-
 ######################### Load in Master DEG Table ###########################
 syn_deg_master <- synFindEntityId(
   "pax6_deg_tables.Rdata", 
@@ -247,12 +244,6 @@ combined_targets <- bind_rows(
     )
 )
 
-
-
-
-
-
-
 ## Final list of existing data files used by this script
 used_files <- list(
   syn_sun_targets,
@@ -263,13 +254,6 @@ used_files <- list(
 
 
 #####################  Setup group and contrast iterators ####################
-
-
-
-
-
-
-
 
 ### Compare the Pax6 vs WT LEC to the pairwise exact test for
 ### each post surgical interval and report:
@@ -371,15 +355,6 @@ compare_deg <- function(
   )
 }
 
-### Cross Interval Table
-### For each gene, report it's summarized injury response 
-### eg. (Up/Down/Not DE/Not Observed)
-
-
-
-tbl <- matrix(
-  c(10000, 500, 400, 50)
-)
 
 # Define A list of named contrasts; each element points to a vector with
 # a pair of group labels. Positive fold changes will be associated
@@ -431,6 +406,50 @@ write.csv(pax6_injury_deg_table, path)
 result_files <- append(result_files, path)
 
 ######################       Build Pivoted Table        ######################
+
+fn <- "LIRTS_DEG_In_Pax6_LEC_Injury_Resp_Summary.csv"
+path <- paste(results, fn, sep="/")
+write.csv(pax6_injury_deg_table, path)
+result_files <- append(result_files, path)
+
+data.frame(
+  gene_id = pax6_injury_deg_table %>%
+    filter(IS_PAX6) %>%
+    pull(gene_id) %>% unique()
+) %>% 
+  left_join(
+    pax6_injury_deg_table %>% 
+      select(gene_id, SYMBOL, matches("^pax6")) %>%
+      distinct(), 
+    by="gene_id"
+  ) %>%
+  left_join(
+    pax6_injury_deg_table %>% 
+      mutate(
+        Injury_Response = ifelse(
+          UP_INJURY, "Upregulated",
+          ifelse(
+            IS_INJURY, "Downregulated",
+            "Not DE"
+          )
+        ),
+        Contrast = factor(
+          Contrast, levels=c(
+            "DNA1_WT6vs0H", "DNA1_WT24vs0H", "DBI_WT24vs0H",
+            "DBI_WT48vs0H","DNA2_WT120vs0H"
+          )
+        )
+      ) %>% 
+      select(gene_id, Contrast, Injury_Response) %>% 
+      pivot_wider(
+        id_cols = "gene_id", 
+        names_from="Contrast", 
+        values_from = "Injury_Response", 
+        values_fill = "Not Observed"
+      ),
+    by="gene_id"
+  ) %>% write.csv(path)
+
 
 ######################  Push script and data to Synapse ######################
 
