@@ -125,32 +125,32 @@ if(file.exists("results/pax6_deg_tables.Rdata")){
 ### For now, use a set of previously generated DEG Tables
 ### Next week: Integrate the LIRTS Deg Table script with this project
 
-syn_dgelists <- synFindEntityId(
+syn_lirts_dgelists <- synFindEntityId(
   "LIRTS_master_dgelist.Rdata",
   parent=syn_data_dir
 )
 
 if(file.exists('data/LIRTS_master_dgelist.Rdata')){
   load('data/LIRTS_master_dgelist.Rdata')
-} else if(!is.null(syn_dgelists)){
+} else if(!is.null(syn_lirts_dgelists)){
   synGet(
-    syn_dgelists, downloadLocation=data_dir
+    syn_lirts_dgelists, downloadLocation=data_dir
   )
   load('data/LIRTS_master_dgelist.Rdata')
 }else{
   stop("Run Prepare_Expression_DGELists.R first")
 }
 
-syn_deg_master <- synFindEntityId(
-  "pax6_deg_tables.Rdata", 
+syn_lirts_deg_master <- synFindEntityId(
+  "LIRTS_Master_DEG_Table.Rdata", 
   parent=syn_deg_tbl_dir
 )
 
 if(file.exists("results/")){
   load("results/LIRTS_Master_DEG_Table.Rdata")
-} else if(!is.null(syn_deg_master)){
+} else if(!is.null(syn_lirts_deg_master)){
   synGet(
-    syn_deg_master, downloadLocation="results"
+    syn_lirts_deg_master, downloadLocation="results"
   )
   load("results/LIRTS_Master_DEG_Table.Rdata")
 }else{
@@ -249,7 +249,9 @@ used_files <- list(
   syn_sun_targets,
   syn_trrust_targets,
   syn_dgelists,
-  syn_deg_master
+  syn_deg_master,
+  syn_lirts_dgelists,
+  syn_lirts_deg_master
 )
 
 
@@ -450,7 +452,7 @@ data.frame(
         values_fill = "Not Observed"
       ),
     by="gene_id"
-  ) %>% View() #write.csv(path)
+  ) %>% write.csv(path)
 
 
 ######################  Push script and data to Synapse ######################
