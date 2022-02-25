@@ -20,7 +20,7 @@ library(synapser)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
-setwd('/Users/adam/Documents/11Sep2021_Pax6_Study_DEG_Analysis/')
+setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
 source('scripts/Overlap_Comparison_Functions.R')
 source('scripts/Wrap_edgeR_Functions.R')
 wd<-getwd()
@@ -212,13 +212,28 @@ Sun_Network_DE_Measures <- data.frame(
         Geno_P6E_FPKM = Avg2
       ),
     by="gene_id"
+  ) %>%
+  left_join(
+    pax6.deg_master %>%
+      filter(
+        Test == "ExactTest" & Group_1 == "WTF" & Group_2 == "P6F" &
+          Filtered == "ribo" & Partition == "Pair"
+      ) %>%
+      select(
+        gene_id,
+        P6FvsWTF_logFC = logFC,
+        P6FvsWTF_FDR = FDR,
+        Geno_WTF_FPKM = Avg1,
+        Geno_P6F_FPKM = Avg2
+      ),
+    by="gene_id"
   )
-
+    
 Sun_Network_DE_Measures[is.na(Sun_Network_DE_Measures)] <- 0
 
 fn <- "Sun_Pax6_Network_Node_Measurements.csv"
 path <- paste(results, fn, sep="/")
-write.csv(Sun_Network_DE_Measures, path)
+write.csv(Sun_Network_DE_Measures, path, row.names = F)
 result_files <- append(result_files, path)
 
 ######################  Push script and data to Synapse ######################

@@ -10,6 +10,7 @@
 # Load libraries, set working directory
 library(edgeR)
 library(dplyr)
+library(synapser)
 setwd("~/Documents/23Feb2022_Pax6_Study_DEG_Analysis/")
 wd<-getwd()
 data_dir="data"
@@ -39,11 +40,11 @@ synLogin()
 syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
 syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
-# syn_deg_dir <- synFindEntityId("DEG_Tables", parent = syn_project)
-# syn_dgelists <- synFindEntityId(
-#   "pax6_master_dgelists.Rdata", 
-#   parent=syn_data_dir
-# )
+syn_deg_dir <- synFindEntityId("DEG_Tables", parent = syn_project)
+syn_dgelists <- synFindEntityId(
+  "pax6_master_dgelists.Rdata",
+  parent=syn_data_dir
+)
 
 
 ##############################################################################
@@ -96,7 +97,6 @@ load(paste0(data_dir,"/","DegNorm_Analysis_Results_ribo.Rdata"))
  
 samples <- pax6.master$samples %>%
   filter(ribo_filter=="ribo") %>%
-  tibble::rownames_to_column("label") %>%
   select(-group, -lib.size, -norm.factors) %>%
   mutate(
     label=gsub("_ribo_", "_degnorm_", label),
