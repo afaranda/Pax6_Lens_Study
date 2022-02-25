@@ -17,7 +17,7 @@ library(synapser)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
-setwd('/Users/adam/Documents/11Sep2021_Pax6_Study_DEG_Analysis/')
+setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
 source('scripts/Excel_Write_Functions.R')
 source('scripts/Overlap_Comparison_Functions.R')
 wd<-getwd()
