@@ -10,7 +10,7 @@
 # Load libraries, set working directory
 library(edgeR)
 library(dplyr)
-setwd("~/Documents/11Sep2021_Pax6_Study_DEG_Analysis")
+setwd("~/Documents/23Feb2022_Pax6_Study_DEG_Analysis/")
 wd<-getwd()
 data_dir="data"
 
@@ -96,7 +96,7 @@ load(paste0(data_dir,"/","DegNorm_Analysis_Results_ribo.Rdata"))
  
 samples <- pax6.master$samples %>%
   filter(ribo_filter=="ribo") %>%
-  #tibble::rownames_to_column("label") %>%
+  tibble::rownames_to_column("label") %>%
   select(-group, -lib.size, -norm.factors) %>%
   mutate(
     label=gsub("_ribo_", "_degnorm_", label),
