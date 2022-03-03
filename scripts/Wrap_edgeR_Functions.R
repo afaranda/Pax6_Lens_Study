@@ -15,18 +15,56 @@ library(pheatmap)
 wd<-getwd()
 ########  Wrapper function to fit a QLF model to a design matrix  ############
 processByDesign <- function(y, design, rob=T, norm="TMM"){
-  y <- y[filterByExpr(y, design),,keep.lib.sizes=F]
-  if(norm !="NONE"){y <- calcNormFactors(y,method=norm)}
-  y <- estimateDisp(y, design, robust = rob)
-  
-  fpkm<-rpkm(y, normalized.lib.sizes = T, gene.length = "eu_length")
-  for(g in unique(y$samples$group)){
-    s<-row.names(y$samples[y$samples$group == g,])
-    y$genes[paste0(g,"_Avg_FPKM")]<-apply(fpkm[,s],1,mean)
+  if(norm == "TMM"){
+    y <- y[filterByExpr(y, design),,keep.lib.sizes=F]
+    if(norm !="NONE"){y <- calcNormFactors(y,method=norm)}
+    y <- estimateDisp(y, design, robust = rob)
+    
+    fpkm<-rpkm(y, normalized.lib.sizes = T, gene.length = "eu_length")
+    for(g in unique(y$samples$group)){
+      s<-row.names(y$samples[y$samples$group == g,])
+      y$genes[paste0(g,"_Avg_FPKM")]<-apply(fpkm[,s],1,mean)
+    }
+    
+    fit <- glmQLFit(y, design, robust = rob)
+    return(list(dge=y, fit=fit, design=design))
+    
+  } else if(norm == "VOOM-TMM"){
+    print(levels(y$samples$group))
+    design<-model.matrix(~group, y$samples)
+    colnames(design) <- gsub("(\\(|\\))", "", colnames(design))
+    colnames(design) <-gsub("group","",colnames(design))
+    y <- y[filterByExpr(y, design),,keep.lib.sizes=F]
+    y <- calcNormFactors(y)
+    
+    # NOTE -- FPKM Calculation Fails to account for VOOM precision Weights !!!
+    # THIS SHOULD BE FIXED if VOOM is intended for use !!!
+    fpkm<-rpkm(y, normalized.lib.sizes = T, gene.length = "eu_length")
+    for(g in unique(y$samples$group)){
+      s<-row.names(y$samples[y$samples$group == g,])
+      y$genes[paste0(g,"_Avg_FPKM")]<-apply(fpkm[,s],1,mean)
+    }
+    
+    v <- voom(y, design=design)
+    return(list(v=v, design=design))
+  } else if(norm == "VOOM-QNT"){
+    print(levels(y$samples$group))
+    design<-model.matrix(~group, y$samples)
+    colnames(design) <- gsub("(\\(|\\))", "", colnames(design))
+    colnames(design) <-gsub("group","",colnames(design))
+    y <- y[filterByExpr(y, design),,keep.lib.sizes=F]
+    
+    # NOTE -- FPKM Calculation Fails to account for VOOM precision Weights !!!
+    # THIS SHOULD BE FIXED if VOOM is intended for use !!!
+    fpkm<-rpkm(y, normalized.lib.sizes = T, gene.length = "eu_length")
+    for(g in unique(y$samples$group)){
+      s<-row.names(y$samples[y$samples$group == g,])
+      y$genes[paste0(g,"_Avg_FPKM")]<-apply(fpkm[,s],1,mean)
+    }
+    
+    v <- voom(y, design=design, normalize.method ="quantile" )
+    return(list(v=v, design=design))
   }
-  
-  fit <- glmQLFit(y, design, robust = rob)
-  return(list(dge=y, fit=fit, design=design))
 }
 ############################ Plot Diagnostics ################################
 ## Generate diagnostic plots. 
@@ -170,7 +208,7 @@ subsetDGEListByGroups<-function(y, groups=c("GR1", "GR2"), norm="TMM"){
         dge=y, fit=fit, design=design
       )
     )
-  } else if (norm == "VOOM") {
+  } else if (norm == "VOOM-TMM") {
     print(levels(y$samples$group))
     design<-model.matrix(~group, y$samples)
     colnames(design) <- gsub("(\\(|\\))", "", colnames(design))
