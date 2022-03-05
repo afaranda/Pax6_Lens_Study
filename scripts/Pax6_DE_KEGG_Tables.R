@@ -24,7 +24,7 @@ setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
 source('scripts/Overlap_Comparison_Functions.R')
 source('scripts/Wrap_edgeR_Functions.R')
 wd<-getwd()
-results<-paste(wd,'results/Pax6_Targets/',sep='/')
+results<-paste(wd,'results/Pax6_KEGG_Pathways/',sep='/')
 if(!dir.exists(results)){
   dir.create(results)
 }
@@ -38,11 +38,11 @@ syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
 syn_fig_dir <- synFindEntityId("Figures", parent=syn_project)
 syn_deg_tbl_dir <- synFindEntityId("DEG_Tables", parent = syn_project)
-syn_deg_sps_dir <- synFindEntityId("Pax6_Targets", parent = syn_project)
+syn_deg_sps_dir <- synFindEntityId("Pax6_KEGG_Pathways", parent = syn_project)
 
 if(is.null(syn_deg_sps_dir)){
   folder <- Folder(
-    name="Pax6_Targets",
+    name="Pax6_KEGG_Pathways",
     parent=syn_project
   )
   syn_deg_sps_dir <- synStore(folder)
@@ -117,9 +117,87 @@ if(file.exists("results/pax6_deg_tables.Rdata")){
   stop("Run Generate_Pax6_DEG_Tables.R first")
 }
 
+########################## Load in Pax6 Targets ##############################
+syn_trrust_targets <- synFindEntityId(
+  "TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
+  parent = syn_data_dir
+)
+
+if(file.exists("data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv")){
+  trrust_targets <- read.table(
+    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
+  )
+  names(trrust_targets) <- c(
+    "TFactor", "Target", "Direction","PMID"
+  )
+  
+} else if(!is.null(syn_trrust_targets)){
+  synGet(
+    syn_trrust_targets, downloadLocation="data"
+  )
+  
+  trrust_targets <- read.table(
+    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
+  )
+  names(trrust_targets) <- c(
+    "TFactor", "Target", "Direction","PMID"
+  )
+  
+}else{
+  stop("Prepare TRRUST Targets file First")
+}
+
+syn_sun_targets <- synFindEntityId(
+  "Sun2015_Pax6_DE_Tagrets.tsv",
+  parent = syn_data_dir
+)
+
+if(file.exists("data/Sun2015_Pax6_DE_Tagrets.tsv")){
+  sun_targets <- read.table(
+    "data/Sun2015_Pax6_DE_Tagrets.tsv",
+    header=T
+  )
+  
+} else if(!is.null(syn_sun_targets)){
+  synGet(
+    syn_sun_targets, downloadLocation="data"
+  )
+  
+  sun_targets <- read.table(
+    "data/Sun2015_Pax6_DE_Tagrets.tsv",
+    header=T
+  )
+  
+}else{
+  stop("Prepare TRRUST Targets file First")
+}
+
+syn_msig_targets <- synFindEntityId(
+  "PAX6_TARGET_GENES_MSigDB_GeneSet.txt",
+  parent = syn_data_dir
+)
+
+if(file.exists("data/PAX6_TARGET_GENES_MSigDB_GeneSet.txt")){
+  msig_targets <- read.table(
+    "data/PAX6_TARGET_GENES_MSigDB_GeneSet.txt",
+    header=F
+  )
+} else if(!is.null(syn_msig_targets)){
+  synGet(
+    syn_msig_targets, downloadLocation="data"
+  )
+  
+  msig_targets <- read.table(
+    "data/PAX6_TARGET_GENES_MSigDB_GeneSet.txt",
+    header=F
+  )
+  
+}else{
+  stop("Prepare MSigDB Targets file First")
+}
 
 
-####################### Load in KEGG Pathways Targets ########################
+########################## Load in KEGG Pathways  ############################
 syn_mmu_04151 <- synFindEntityId(
   "mmu04151.xml", parent = syn_data_dir
 )
@@ -140,6 +218,7 @@ if(file.exists("data/mmu04151.xml")){
 }else{
   stop("Download KEGG Data first")
 }
+
 
 syn_mmu_04350 <- synFindEntityId(
   "mmu04350.xml", parent = syn_data_dir
@@ -171,8 +250,15 @@ used_files <- list(
 )
 ################## Pivot DE Results and extract Node values ##################
 result_files <- c()
-for(path in c("mmu04151", "mmu04350")){
-  kegg <- get(path)
+for(pathway in c("mmu04151", "mmu04350")){
+  kegg <- get(pathway) %>%
+    mutate(
+      Interaction=paste0(
+        toupper(substr(subtype,1,1)),
+        substr(subtype,2, nchar(subtype))
+      )
+    )
+  
   kegg_pathway_measures <- data.frame(
     kegg_id = union(
       kegg$from, kegg$to
@@ -195,12 +281,23 @@ for(path in c("mmu04151", "mmu04350")){
           Test == "ExactTest" & Group_1 == "WTE" & Group_2 == "WTF" &
             Filtered == "ribo" & Partition == "Pair"
         ) %>%
+        mutate(
+          BIO_WTFvsWTE = (
+            (Avg1 > 2 | Avg2 > 2) & 
+              abs(Avg1 - Avg2) > 2 &
+              FDR < 0.05 &
+              abs(logFC) > 1
+          ),
+          ROBUST_WTFvsWTE = (Avg1 > 2 | Avg2 > 2)
+        ) %>%
         dplyr::select(
           gene_id,
           WTFvsWTE_logFC = logFC,
           WTFvsWTE_FDR = FDR,
           Cell_WTE_FPKM = Avg1,
-          Cell_WTF_FPKM = Avg2
+          Cell_WTF_FPKM = Avg2,
+          ROBUST_WTFvsWTE,
+          BIO_WTFvsWTE
         ),
       by="gene_id"
     ) %>%
@@ -210,12 +307,23 @@ for(path in c("mmu04151", "mmu04350")){
           Test == "ExactTest" & Group_1 == "P6E" & Group_2 == "P6F" &
             Filtered == "ribo" & Partition == "Pair"
         ) %>%
+        mutate(
+          BIO_P6FvsP6E = (
+            (Avg1 > 2 | Avg2 > 2) & 
+              abs(Avg1 - Avg2) > 2 &
+              FDR < 0.05 &
+              abs(logFC) > 1
+          ),
+          ROBUST_P6FvsP6E = (Avg1 > 2 | Avg2 > 2)
+        ) %>%
         dplyr::select(
           gene_id,
           P6FvsP6E_logFC = logFC,
           P6FvsP6E_FDR = FDR,
           Cell_P6E_FPKM = Avg1,
-          Cell_P6F_FPKM = Avg2
+          Cell_P6F_FPKM = Avg2,
+          BIO_P6FvsP6E,
+          ROBUST_P6FvsP6E
         ),
       by="gene_id"
     ) %>%
@@ -225,12 +333,23 @@ for(path in c("mmu04151", "mmu04350")){
           Test == "ExactTest" & Group_1 == "WTE" & Group_2 == "P6E" &
             Filtered == "ribo" & Partition == "Pair"
         ) %>%
+        mutate(
+          BIO_P6EvsWTE = (
+            (Avg1 > 2 | Avg2 > 2) & 
+              abs(Avg1 - Avg2) > 2 &
+              FDR < 0.05 &
+              abs(logFC) > 1
+          ),
+          ROBUST_P6EvsWTE = (Avg1 > 2 | Avg2 > 2)
+        ) %>%
         dplyr::select(
           gene_id,
           P6EvsWTE_logFC = logFC,
           P6EvsWTE_FDR = FDR,
           Geno_WTE_FPKM = Avg1,
-          Geno_P6E_FPKM = Avg2
+          Geno_P6E_FPKM = Avg2,
+          BIO_P6EvsWTE,
+          ROBUST_P6EvsWTE
         ),
       by="gene_id"
     ) %>%
@@ -239,23 +358,52 @@ for(path in c("mmu04151", "mmu04350")){
         filter(
           Test == "ExactTest" & Group_1 == "WTF" & Group_2 == "P6F" &
             Filtered == "ribo" & Partition == "Pair"
+        )%>%
+        mutate(
+          BIO_P6FvsWTF = (
+            (Avg1 > 2 | Avg2 > 2) & 
+              abs(Avg1 - Avg2) > 2 &
+              FDR < 0.05 &
+              abs(logFC) > 1
+          ),
+          ROBUST_P6FvsWTF = (Avg1 > 2 | Avg2 > 2)
         ) %>%
         dplyr::select(
           gene_id,
           P6FvsWTF_logFC = logFC,
           P6FvsWTF_FDR = FDR,
           Geno_WTF_FPKM = Avg1,
-          Geno_P6F_FPKM = Avg2
+          Geno_P6F_FPKM = Avg2,
+          BIO_P6FvsWTF,
+          ROBUST_P6FvsWTF
         ),
       by="gene_id"
+    ) %>%
+    mutate(
+      TRRUST_TARGET = SYMBOL %in% trrust_targets$Target,
+      SUN_TARGET = SYMBOL %in% sun_targets$Target,
+      MSIG_TARGET = SYMBOL %in% paste0(
+        substr(msig_targets$V1, 1,1),       ### NEED BETTER HOMOLOGY MAPPING!
+        tolower(
+          substr(
+            msig_targets$V1, 2, nchar(msig_targets$V1)
+          )
+        )
+      )
     )
   
   kegg_pathway_measures[is.na(kegg_pathway_measures)] <- 0
   print(nrow(kegg_pathway_measures))
-  fn <- paste0("KEGG_",path, "_Network_Node_Measurements.csv")
-  path <- paste(results, fn, sep="/")
-  write.csv(kegg_pathway_measures, path, row.names = F)
-  result_files <- append(result_files, path)
+  
+  fn <- paste0("KEGG_",pathway, "_Network_Node_Measurements.csv")
+  file_path <- paste(results, fn, sep="/")
+  write.csv(kegg_pathway_measures, file_path, row.names = F, quote=F)
+  result_files <- append(result_files, file_path)
+  
+  fn <- paste0("KEGG_",pathway, "_Network.csv")
+  file_path <- paste(results, fn, sep="/")
+  write.csv(kegg, file_path, row.names = F, quote = F)
+  result_files <- append(result_files, file_path)
 }
 
 ######################  Push script and data to Synapse ######################
