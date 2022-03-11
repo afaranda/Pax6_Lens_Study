@@ -171,6 +171,31 @@ if(file.exists("data/Sun2015_Pax6_DE_Tagrets.tsv")){
   stop("Prepare TRRUST Targets file First")
 }
 
+syn_msig_targets <- synFindEntityId(
+  "PAX6_TARGET_GENES_MSigDB_GeneSet.txt",
+  parent = syn_data_dir
+)
+
+if(file.exists("data/PAX6_TARGET_GENES_MSigDB_GeneSet.txt")){
+  msig_targets <- read.table(
+    "data/PAX6_TARGET_GENES_MSigDB_GeneSet.txt",
+    header=F
+  )
+} else if(!is.null(syn_msig_targets)){
+  synGet(
+    syn_msig_targets, downloadLocation="data"
+  )
+  
+  msig_targets <- read.table(
+    "data/PAX6_TARGET_GENES_MSigDB_GeneSet.txt",
+    header=F
+  )
+  
+}else{
+  stop("Prepare MSigDB Targets file First")
+}
+
+
 ### For Combined Targets, Use the observation from Sun 2015 
 combined_targets <- bind_rows(
   sun_targets %>%
