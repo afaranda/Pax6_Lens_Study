@@ -20,12 +20,15 @@ library(tibble)
 library(dplyr)
 library(tibble)
 library(synapser)
+library(ggrepel)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
-setwd('/Users/adam/Documents/11Sep2021_Pax6_Study_DEG_Analysis/')
+setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
 source('scripts/Overlap_Comparison_Functions.R')
 source('scripts/Wrap_edgeR_Functions.R')
+source('scripts/Excel_Write_Functions.R')
+
 wd<-getwd()
 results<-paste(wd,'results/LIRTS_Analysis',sep='/')
 if(!dir.exists(results)){
@@ -366,7 +369,8 @@ contrasts=list(
   DBI_WT48vs0H=c('WT_0H_DBI', 'WT_48H_DBI', 'DBI_Wildtype'),
   DNA1_WT6vs0H=c('WT_0H_DNA1', 'WT_6H_DNA1', 'DNA1_Wildtype'),
   DNA1_WT24vs0H=c('WT_0H_DNA1', 'WT_24H_DNA1', 'DNA1_Wildtype'),
-  DNA2_WT120vs0H=c('WT_0H_DNA2', 'WT_120H_DNA2', 'DNA2_Wildtype')
+  DNA2_WT120vs0H=c('WT_0H_DNA2', 'WT_120H_DNA2', 'DNA2_Wildtype'),
+  DNA3_WT72vs0H=c('WT_0H_DNA3', 'WT_72H_DNA3', 'DNA2_Wildtype')
 )
 
 
@@ -406,6 +410,55 @@ fn <- "LIRTS_DEG_In_Pax6_LEC_Long_Table.csv"
 path <- paste(results, fn, sep="/")
 write.csv(pax6_injury_deg_table, path)
 result_files <- append(result_files, path)
+###################### Setup Intersection Spreadsheets #######################
+for(c in names(contrasts)){
+  inj <- res[[2]] %>%
+    filter(
+      Test == "ExactTest",
+      Group_1 == contrasts[[c]][1],
+      Group_2 == contrasts[[c]][2],
+      Samples == contrasts[[c]][3]
+    )
+  print(c)
+  
+  C1 <- "P6vsWT"
+  C2 <- paste0(
+    gsub(
+      "_DBI","",
+      gsub(
+        "_DNA1","",
+        gsub(
+          "_DNA2","",
+          gsub(
+            "_DNA3","",
+            contrasts[[c]][2]
+          )
+        )
+      )  
+    ) ,"vs",
+    gsub(
+      "_DBI","",
+      gsub(
+        "_DNA1","",
+        gsub(
+          "_DNA2","",
+          gsub(
+            "_DNA3","",
+            contrasts[[c]][1]
+          )
+        )
+      )  
+    )
+  )
+  createMethodComparisonSpreadsheet(
+    C1 = C1, C2 = C2, template ="templates/overlap.xlsx",
+    dg1 = pax6_deg, dg2 = inj, pref = "PCO", fname = "test.xlsx",
+    dg2.me = 2, dg1.ds = "Pax6 HS vs WT LEC",
+    dg2.ds = "Injury", unlog = T,
+    dg2.bioFun=bioSigRNASeq, idc = "gene_id"#,
+    # annot=an, #rnc=comp.meta[[c]][["rnc"]]
+  )
+}
 
 ######################       Build Pivoted Table        ######################
 
@@ -453,6 +506,70 @@ data.frame(
       ),
     by="gene_id"
   ) %>% write.csv(path)
+################### Cytokine-Cytokine Receptor Comparison ####################
+
+ccr_genes <-c(
+  "Il1rn", "Tnfsf8", "Ccl5", "Lepr", "Il17re", "Tnfrsf11b", "Ccl7", "Ccl17", 
+  "Cxcl14", "Eda2r", "Tgfbr2", "Il6ra", "Cd40", "Gdf15", "Bmpr1b", "Lif",
+  "Tgfb1", "Clcf1", "Il17rb", "Ccl2", "Cx3cl1", "Tnfrsf19", "Bmp6",
+  "Tnfrsf12a", "Ackr4", "Tnfrsf21", "Osmr", "Il3ra", "Csf1", "Relt", "Cxcl12",
+  "Ghr", "Tnfrsf11a", "Lifr", "Tnfrsf25", "Ctf1", "Tgfb3", "Tnfrsf1b", 
+  "Gdf10", "Il17rc", "Il10rb"
+)
+
+ccr_genes <- pax6.master$genes %>%
+  filter(SYMBOL %in% ccr_genes) %>%
+  select(gene_id, SYMBOL)
+
+
+ccr_genes <- inner_join(
+  ccr_genes, 
+  pax6.deg_master %>%
+    filter(
+      Test == "ExactTest" & 
+        Group_1 == "WTE" & 
+        Group_2 == "P6E" & 
+        Filtered == "ribo" &
+        Partition == "Pair" &
+        abs(logFC) > 1 &
+        FDR  < 0.05
+    ) %>%
+    select(
+      gene_id,
+      Pax6_logFC = logFC
+    ) 
+)
+
+ccr_genes <- inner_join(
+  ccr_genes, 
+  res[[2]] %>%
+    filter(
+      Test == "ExactTest" & 
+        Group_1 == "WT_0H_DBI" & 
+        Group_2 == "WT_24H_DBI" & 
+        Samples == "DBI_Wildtype" &
+        abs(logFC) > 1 &
+        FDR  < 0.05
+    ) %>%
+    select(
+      gene_id,
+      Injury_logFC = logFC
+    ) 
+)
+
+ggsave
+ggplot(
+  ccr_genes, aes(x=Injury_logFC, y=Pax6_logFC)
+) + 
+  geom_point() + 
+  geom_label_repel(aes(label=SYMBOL)) +
+  xlab("Log Fold Change 24 vs 0 Hours After Injury") +
+  ylab("Log Fold Change Sey vs Wildtype Lens Epithelium") +
+  theme(
+    axis.text = element_text(size=12),
+    axis.title = element_text(size=12)
+  )
+  
 
 
 ######################  Push script and data to Synapse ######################
