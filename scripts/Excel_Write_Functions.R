@@ -124,112 +124,109 @@ writeDescTables<-function(
     # starting from the coordinates in "start_cell", 
     print(template)
     if(file.exists(template)){
-    	  print("Opening template")
+      print("Opening template")
       wb<-loadWorkbook(template)
-      if(!(name %in% wb$sheet_names)){
-        addWorksheet(wb, sheetName = name)
-      }
-      for(t in names(descTables)){
-        print(t)
-        tbl<-descTables[[t]]
-        if(!tbl$tc){
-          rn<-ifelse(tbl$rn, 1, 0)
-          cn<-ifelse(tbl$cn, 1, 0)
-          # Generate Table Title
-          removeCellMerge(
-            wb, name, rows=tbl$corner[1], 
-            cols=(tbl$corner[2] + offset):(ncol(tbl$Table)+rn)
-          )
-          mergeCells(
-            wb, name, rows=tbl$corner[1], 
-            cols=(tbl$corner[2] + offset):(ncol(tbl$Table)+rn)
-          )
-          cells<-expand.grid(
-            rows=tbl$corner[1], 
-            cols=(tbl$corner[2] + offset):(ncol(tbl$Table)+rn)
-          )
-          addStyle(
-            wb, name, tt, rows=cells$rows, 
-            cols= cells$cols,
-            gridExpand = T
-          )
-          writeData(
-            wb, name, as.data.frame(t), colNames = F, rowNames = F,
-            startRow = (tbl$corner[1]), startCol = offset + tbl$corner[2]
-          )
-          
-          # Generate Table Body
-          cells<-expand.grid(
-            rows=(tbl$corner[1] + 1):(tbl$corner[1] + nrow(tbl$Table)+cn),
-            cols=(
-              tbl$corner[2] + offset + rn):(ncol(tbl$Table)+rn+offset)
-          )
-          print(paste(min(cells$rows), min(cells$cols)))
-          print(paste(max(cells$rows), max(cells$cols)))
-          addStyle(
-            wb, name, tb,
-            rows=cells$rows,
-            cols=cells$cols
-          )
-          writeData(
-            wb, name, tbl$Table,
-            startRow =(tbl$corner[1] + 1), 
-            startCol =(tbl$corner[2] + offset),
-            colNames = tbl$cn, rowNames = tbl$rn
-          )
-        } else {
-          rn<-ifelse(tbl$rn, 1, 0)
-          cn<-ifelse(tbl$cn, 1, 0)
-          
-          # Generate Table Body
-          cells<-expand.grid(
-            rows=(tbl$corner[1]):(tbl$corner[1] + nrow(tbl$Table)),
-            cols=(rn+tbl$corner[2] + offset):(rn+ncol(tbl$Table)+offset)
-          )
-          print(paste(min(cells$rows), min(cells$cols)))
-          print(paste(max(cells$rows), max(cells$cols)))
-          addStyle(
-            wb, name, tb,
-            rows=cells$rows,
-            cols=cells$cols
-          )
-          writeData(
-            wb, name, tbl$Table,
-            startRow =(tbl$corner[1]), 
-            startCol =(tbl$corner[2] + offset),
-            colNames = tbl$rn, rowNames = tbl$rn
-          )
-          # Generate Table Title 
-          
-          cells<-expand.grid(
-            rows=tbl$corner[1], 
-            cols=(tbl$corner[2] + offset)
-          )
-          addStyle(
-            wb, name, tt, rows=cells$rows, 
-            cols= cells$cols,
-            gridExpand = T
-          )
-          writeData(
-            wb, name, as.data.frame(t), colNames = F, rowNames = F,
-            startRow = (tbl$corner[1]), startCol = offset + tbl$corner[2]
-          )
-          
-          print("wtf")
-        }
-      }
-      
-      
+    } else {
+      stop("Cant open template")
     }
   }
   if(!(name %in% wb$sheet_names)){
     addWorksheet(wb, sheetName = name)
   }
+  for(t in names(descTables)){
+    print(t)
+    tbl<-descTables[[t]]
+    if(!tbl$tc){
+      rn<-ifelse(tbl$rn, 1, 0)
+      cn<-ifelse(tbl$cn, 1, 0)
+      # Generate Table Title
+      removeCellMerge(
+        wb, name, rows=tbl$corner[1], 
+        cols=(tbl$corner[2] + offset):(ncol(tbl$Table)+rn)
+      )
+      mergeCells(
+        wb, name, rows=tbl$corner[1], 
+        cols=(tbl$corner[2] + offset):(ncol(tbl$Table)+rn)
+      )
+      cells<-expand.grid(
+        rows=tbl$corner[1], 
+        cols=(tbl$corner[2] + offset):(ncol(tbl$Table)+rn)
+      )
+      addStyle(
+        wb, name, tt, rows=cells$rows, 
+        cols= cells$cols,
+        gridExpand = T
+      )
+      writeData(
+        wb, name, as.data.frame(t), colNames = F, rowNames = F,
+        startRow = (tbl$corner[1]), startCol = offset + tbl$corner[2]
+      )
+      
+      # Generate Table Body
+      cells<-expand.grid(
+        rows=(tbl$corner[1] + 1):(tbl$corner[1] + nrow(tbl$Table)+cn),
+        cols=(
+          tbl$corner[2] + offset + rn):(ncol(tbl$Table)+rn+offset)
+      )
+      print(paste(min(cells$rows), min(cells$cols)))
+      print(paste(max(cells$rows), max(cells$cols)))
+      addStyle(
+        wb, name, tb,
+        rows=cells$rows,
+        cols=cells$cols
+      )
+      writeData(
+        wb, name, tbl$Table,
+        startRow =(tbl$corner[1] + 1), 
+        startCol =(tbl$corner[2] + offset),
+        colNames = tbl$cn, rowNames = tbl$rn
+      )
+    } else {
+      rn<-ifelse(tbl$rn, 1, 0)
+      cn<-ifelse(tbl$cn, 1, 0)
+      
+      # Generate Table Body
+      cells<-expand.grid(
+        rows=(tbl$corner[1]):(tbl$corner[1] + nrow(tbl$Table)),
+        cols=(rn+tbl$corner[2] + offset):(rn+ncol(tbl$Table)+offset)
+      )
+      print(paste(min(cells$rows), min(cells$cols)))
+      print(paste(max(cells$rows), max(cells$cols)))
+      addStyle(
+        wb, name, tb,
+        rows=cells$rows,
+        cols=cells$cols
+      )
+      writeData(
+        wb, name, tbl$Table,
+        startRow =(tbl$corner[1]), 
+        startCol =(tbl$corner[2] + offset),
+        colNames = tbl$rn, rowNames = tbl$rn
+      )
+      # Generate Table Title 
+      
+      cells<-expand.grid(
+        rows=tbl$corner[1], 
+        cols=(tbl$corner[2] + offset)
+      )
+      addStyle(
+        wb, name, tt, rows=cells$rows, 
+        cols= cells$cols,
+        gridExpand = T
+      )
+      writeData(
+        wb, name, as.data.frame(t), colNames = F, rowNames = F,
+        startRow = (tbl$corner[1]), startCol = offset + tbl$corner[2]
+      )
+      
+      print("wtf")
+    }
+  }
   return(wb)
 }
 
 
-
+i
 # Function that Generates a spreadsheet comparing results from two
 # pairsiwe contrasts. 
 
@@ -548,8 +545,7 @@ createMethodComparisonSpreadsheet<-function(
   print("ven")
   stat.ven<-vennIntersections(
     dg1, dg2, dg1.idc = idc, dg2.idc = idc,
-    dg1.lbl = C1, dg2.lbl = C2, minDiff = 0, minAvg = 0,
-    lfcmin = 1, fdrmax = 0.05
+    dg1.lbl = C1, dg2.lbl = C2, minDiff = 0, minAvg = 0
   )
   stat.inx<-tabulateOverlap(stat.tables, rename = T)
 
