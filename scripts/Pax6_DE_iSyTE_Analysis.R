@@ -30,7 +30,7 @@ source('scripts/Wrap_edgeR_Functions.R')
 source('scripts/Excel_Write_Functions.R')
 
 wd<-getwd()
-results<-paste(wd,'results/LIRTS_Analysis',sep='/')
+results<-paste(wd,'results/iSyTE_Analysis',sep='/')
 if(!dir.exists(results)){
   dir.create(results)
 }
@@ -44,11 +44,11 @@ syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
 syn_fig_dir <- synFindEntityId("Figures", parent=syn_project)
 syn_deg_tbl_dir <- synFindEntityId("DEG_Tables", parent = syn_project)
-syn_deg_sps_dir <- synFindEntityId("Pax6_LIRTS_Analysis", parent = syn_project)
+syn_deg_sps_dir <- synFindEntityId("Pax6_iSyTE_Analysis", parent = syn_project)
 
 if(is.null(syn_deg_sps_dir)){
   folder <- Folder(
-    name="Pax6_LIRTS_Analysis",
+    name="Pax6_iSyTE_Analysis",
     parent=syn_project
   )
   syn_deg_sps_dir <- synStore(folder)
@@ -123,44 +123,36 @@ if(file.exists("results/pax6_deg_tables.Rdata")){
   stop("Run Generate_Pax6_DEG_Tables.R first")
 }
 
-########################## Load LIRTS Deg Tables #############################
+############################# Load iSyTE Data ################################
 
-### For now, use a set of previously generated DEG Tables
-### Next week: Integrate the LIRTS Deg Table script with this project
-
-syn_lirts_dgelists <- synFindEntityId(
-  "LIRTS_master_dgelist.Rdata",
+syn_isyte <- synFindEntityId(
+  "isyte528_long_table.csv",
   parent=syn_data_dir
 )
 
-if(file.exists('data/LIRTS_master_dgelist.Rdata')){
-  load('data/LIRTS_master_dgelist.Rdata')
-} else if(!is.null(syn_lirts_dgelists)){
+if(file.exists('data/isyte528_long_table.csv')){
+  isyte528 <- read.csv('data/isyte528_long_table.csv', row.names = 1)
+} else if(!is.null(syn_isyte)){
   synGet(
-    syn_lirts_dgelists, downloadLocation=data_dir
+    syn_isyte, downloadLocation=data_dir
   )
-  load('data/LIRTS_master_dgelist.Rdata')
+  isyte528 <- read.csv('data/isyte528_long_table.csv', row.names = 1)
 }else{
   stop("Run Prepare_Expression_DGELists.R first")
 }
 
-syn_lirts_deg_master <- synFindEntityId(
-  "LIRTS_Master_DEG_Table.Rdata", 
-  parent=syn_deg_tbl_dir
-)
+isyte528 %>%
+  left_join(
+    pax6.master$genes %>%
+      dplyr::select(SYMBOL, gene_id),
+    by=c(MGI.symbol = "SYMBOL")
+  ) -> isyte528
 
-if(file.exists("results/")){
-  load("results/LIRTS_Master_DEG_Table.Rdata")
-} else if(!is.null(syn_lirts_deg_master)){
-  synGet(
-    syn_lirts_deg_master, downloadLocation="results"
-  )
-  load("results/LIRTS_Master_DEG_Table.Rdata")
-}else{
-  stop("Run Generate_LIRTS_DEG_Tables.R first")
-}
-
-
+isyte_528_P56 <- isyte528 %>% 
+  filter(
+    !is.na(gene_id) & Interval == "P56" & p_value < 0.05 & fold_change > 2
+  ) %>%
+  pull("gene_id")
 
 ########################## Load in Pax6 Targets ##############################
 syn_trrust_targets <- synFindEntityId(
@@ -252,9 +244,8 @@ used_files <- list(
   syn_sun_targets,
   syn_trrust_targets,
   syn_dgelists,
-  syn_deg_master,
-  syn_lirts_dgelists,
-  syn_lirts_deg_master
+  syn_isyte,
+  syn_deg_master
 )
 
 
@@ -268,16 +259,16 @@ used_files <- list(
 ###   2.) Contingency tables for directional dependence
 ###   3.) Fold Change Plot.
 
-compare_deg <- function(
+isyte_enrichment <- function(
   pax6_deg = data.frame(),
-  injury_deg = data.frame(),
+  isyte = data.frame(),
   result_label = "DNA1_6_Hours_Post_Injury"
 ){
 
   ### Run the Fisher's Exact Test for Overrepresentation
   universe <- union(
     pax6_deg$gene_id,
-    injury_deg$gene_id
+    isyte$gene_id
   )
   
   ## Join Tables for uniform analysis and add indicator columns
@@ -293,10 +284,12 @@ compare_deg <- function(
       by="gene_id"
     ) %>%
     left_join(
-      injury_deg %>%
+      isyte %>%
         select(
-          gene_id, injury_logFC = logFC, injury_FDR = FDR,
-          injury_Avg1=Avg1, injury_Avg2=Avg2
+          gene_id, isyte_fold_change=fold_change, isyte_pvalue= p_value,
+          isyte_Lens_Expression = Lens_Expression, 
+          isyte_WEB_Expression=WEB_Expression,
+          Platform, Interval
         ),
       by="gene_id"
     ) %>%
@@ -306,22 +299,31 @@ compare_deg <- function(
       IS_PAX6 = (
         abs(pax6_logFC) > 1 & pax6_FDR < 0.05 &
           (pax6_Avg1 > 2 | pax6_Avg2 > 2) &
-          (abs(pax6_Avg1 - pax6_Avg2) > 2)
+          (abs(pax6_Avg1 - pax6_Avg2) > 2) &
+          !is.na(pax6_logFC)
       ),
       UP_PAX6 = (
         pax6_logFC > 1 & pax6_FDR < 0.05 &
           (pax6_Avg1 > 2 | pax6_Avg2 > 2) &
-          (abs(pax6_Avg1 - pax6_Avg2) > 2)
+          (abs(pax6_Avg1 - pax6_Avg2) > 2) &
+          !is.na(pax6_logFC)
       ),
-      IS_INJURY = (
-        abs(injury_logFC) > 1 & injury_FDR < 0.05 &
-          (injury_Avg1 > 2 | injury_Avg2 > 2) &
-          (abs(injury_Avg1 - injury_Avg2) > 2)
+      DN_PAX6 = (
+        pax6_logFC < -1 & pax6_FDR < 0.05 &
+          (pax6_Avg1 > 2 | pax6_Avg2 > 2) &
+          (abs(pax6_Avg1 - pax6_Avg2) > 2) &
+          !is.na(pax6_logFC)
       ),
-      UP_INJURY = (
-        injury_logFC > 1 & injury_FDR < 0.05 &
-          (injury_Avg1 > 2 | injury_Avg2 > 2) &
-          (abs(injury_Avg1 - injury_Avg2) > 2)
+      IS_ISYTE = (
+        !is.na(isyte_fold_change)
+      ),
+      IS_ISYTE_DE = (
+        abs(isyte_fold_change) > 2 & isyte_pvalue < 0.05 & 
+          !is.na(isyte_fold_change)
+      ),
+      UP_ISYTE = (
+        isyte_fold_change > 2 & isyte_pvalue < 0.05  & 
+          !is.na(isyte_fold_change)
       )
     ) %>%
     left_join(
@@ -332,11 +334,20 @@ compare_deg <- function(
       by="gene_id"
     )
   
+  print(nrow(test_data))
   ## Prepare Overall Enrichment Table
-  print("Overall overrepresentation")
+  print("Overall overrepresentation -- all 528 iSyTE")
   contingency <- table(
-    test_data$IS_PAX6,
-    test_data$IS_INJURY
+    IS_PAX6=test_data$IS_PAX6,
+    IS_ISYTE=test_data$IS_ISYTE
+  )
+  print(contingency)
+  print(fisher.test(contingency))
+  
+  print("Overall overrepresentation -- Lens Enriched at P56")
+  contingency <- table(
+    IS_PAX6=test_data$IS_PAX6,
+    IS_ISYTE_DE=test_data$IS_ISYTE_DE
   )
   print(contingency)
   print(fisher.test(contingency))
@@ -344,8 +355,8 @@ compare_deg <- function(
   print("Directional Dependence")
   contingency <- table(
     test_data %>%
-      filter(IS_PAX6 & IS_INJURY) %>%
-      select(UP_PAX6, UP_INJURY)
+      filter(IS_PAX6 & IS_ISYTE) %>%
+      select(UP_PAX6, UP_ISYTE)
   )
   print(sum(contingency))
   print(contingency)
@@ -353,7 +364,7 @@ compare_deg <- function(
   
   return(
     test_data %>%
-      filter(IS_PAX6 & IS_INJURY) %>%
+      filter(IS_PAX6 & IS_ISYTE) %>%
       mutate(
         PAX6_TARGET = SYMBOL %in% combined_targets$Target
       )
@@ -365,234 +376,80 @@ compare_deg <- function(
 # a pair of group labels. Positive fold changes will be associated
 # with the second group listed. 
 contrasts=list(
-  DBI_WT24vs0H=c('WT_0H_DBI', 'WT_24H_DBI', 'DBI_Wildtype'),
-  DBI_WT48vs0H=c('WT_0H_DBI', 'WT_48H_DBI', 'DBI_Wildtype'),
-  DNA1_WT6vs0H=c('WT_0H_DNA1', 'WT_6H_DNA1', 'DNA1_Wildtype'),
-  DNA1_WT24vs0H=c('WT_0H_DNA1', 'WT_24H_DNA1', 'DNA1_Wildtype'),
-  DNA2_WT120vs0H=c('WT_0H_DNA2', 'WT_120H_DNA2', 'DNA2_Wildtype'),
-  DNA3_WT72vs0H=c('WT_0H_DNA3', 'WT_72H_DNA3', 'DNA2_Wildtype')
+  Pax6vsWT_LEC_X_P56=c('WTE', 'P6E', 'P56'),
+  Pax6vsWT_LFC_X_P56=c('WTF', 'P6F', 'P56'),
+  WT_LECvsLFC_X_P56=c('WTE', 'WTF', 'P56'),
+  P6_LECvsLFC_X_P56=c('P6E', 'P6F', 'P56')
 )
 
-
-####### Iterate over contrasts and extract DE Results for Pax6 Targets #######
 ########### Calculate Fisher's Exact Test results for each contrast  #########
 result_files <- c()
-pax6_deg <- pax6.deg_master %>% filter(
-  Partition == "Pair",
-  Filtered == "ribo",
-  Group_1 == "WTE",
-  Group_2 == "P6E",
-  Test == "ExactTest"
-)
 
-pax6_injury_deg_table <- data.frame()
-fn <- "LIRTS_Enrichment_In_Pax6_DEG.txt"
+pax6_isyte_deg_table <- data.frame()
+fn <- "iSyTE_Enrichment_In_Pax6_DEG.txt"
 path <- paste(results, fn, sep="/")
 result_files <- append(result_files, path)
 sink(path)
 for(c in names(contrasts)){
-  inj <- res[[2]] %>%
+  pax6_deg <- pax6.deg_master %>% filter(
+    Partition == "Pair",
+    Filtered == "ribo",
+    Group_1 == contrasts[[c]][1],
+    Group_2 == contrasts[[c]][2],
+    Test == "ExactTest"
+  )
+  isyte <- isyte528 %>%
     filter(
-      Test == "ExactTest",
-      Group_1 == contrasts[[c]][1],
-      Group_2 == contrasts[[c]][2],
-      Samples == contrasts[[c]][3]
+      Platform == "affy430",
+      Interval == contrasts[[c]][3]
     )
   print(c)
-  pax6_injury_deg_table <-bind_rows(
-    pax6_injury_deg_table,
-    compare_deg(pax6_deg, inj, result_label=c)
+  pax6_isyte_deg_table <-bind_rows(
+    pax6_isyte_deg_table,
+    isyte_enrichment(pax6_deg, isyte, result_label=c)
   )
 }
 sink()
 
-fn <- "LIRTS_DEG_In_Pax6_LEC_Long_Table.csv"
+fn <- "ISYTE_GENES_In_Pax6_Long_Table.csv"
 path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
-result_files <- append(result_files, path)
-###################### Setup Intersection Spreadsheets #######################
-for(c in names(contrasts)){
-  inj <- res[[2]] %>%
-    filter(
-      Test == "ExactTest",
-      Group_1 == contrasts[[c]][1],
-      Group_2 == contrasts[[c]][2],
-      Samples == contrasts[[c]][3]
-    )
-  print(c)
-  
-  C1 <- "P6vsWT"
-  C2 <- paste0(
-    gsub(
-      "_DBI","",
-      gsub(
-        "_DNA1","",
-        gsub(
-          "_DNA2","",
-          gsub(
-            "_DNA3","",
-            contrasts[[c]][2]
-          )
-        )
-      )  
-    ) ,"vs",
-    gsub(
-      "_DBI","",
-      gsub(
-        "_DNA1","",
-        gsub(
-          "_DNA2","",
-          gsub(
-            "_DNA3","",
-            contrasts[[c]][1]
-          )
-        )
-      )  
-    )
-  )
-  template <- paste0("templates/Pax6_LEC_",c,"_overlap_template.xlsx")
-  fn <- paste0("Pax6_HS_vs_WT_X_",c,"DEG_Comparison.xlsx")
-  path <- paste(results, fn, sep="/")
-  write.csv(pax6_injury_deg_table, path)
-  result_files <- append(result_files, path)
-  createMethodComparisonSpreadsheet(
-    C1 = C1, C2 = C2, template =template, #"templates/overlap.xlsx",
-    dg1 = pax6_deg, dg2 = inj, pref = "PCO", fname = path,
-    dg2.me = 2, dg1.ds = "Pax6 HS vs WT LEC",
-    dg2.ds = "Injury", unlog = T,
-    dg2.bioFun=bioSigRNASeq, idc = "gene_id",
-    annot=pax6.master$genes %>% select(gene_id, SYMBOL, DESCRIPTION), #rnc=comp.meta[[c]][["rnc"]]
-  )
-}
-
-######################       Build Pivoted Table        ######################
-
-fn <- "LIRTS_DEG_In_Pax6_LEC_Injury_Resp_Summary.csv"
-path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
+write.csv(pax6_isyte_deg_table, path)
 result_files <- append(result_files, path)
 
-data.frame(
-  gene_id = pax6_injury_deg_table %>%
-    filter(IS_PAX6) %>%
-    pull(gene_id) %>% unique()
-) %>% 
-  left_join(
-    pax6_injury_deg_table %>% 
-      select(
-        gene_id, SYMBOL, DESCRIPTION, PAX6_TARGET,
-        matches("^pax6", ignore.case=F)) %>%
-      distinct(), 
-    by="gene_id"
-  ) %>%
-  left_join(
-    pax6_injury_deg_table %>% 
-      mutate(
-        Injury_Response = ifelse(
-          UP_INJURY, "Upregulated",
-          ifelse(
-            IS_INJURY, "Downregulated",
-            "Not DE"
-          )
-        ),
-        Contrast = factor(
-          Contrast, levels=c(
-            "DNA1_WT6vs0H", "DNA1_WT24vs0H", "DBI_WT24vs0H",
-            "DBI_WT48vs0H","DNA2_WT120vs0H"
-          )
-        )
-      ) %>% 
-      select(gene_id, Contrast, Injury_Response) %>% 
-      pivot_wider(
-        id_cols = "gene_id", 
-        names_from="Contrast", 
-        values_from = "Injury_Response", 
-        values_fill = "Not Observed"
-      ),
-    by="gene_id"
+
+pax6.deg_master<- pax6.deg_master %>%
+  mutate(
+    is_p56 = gene_id %in% isyte_528_P56,
+    is_bio = abs(Avg1 - Avg2) > 2 & (Avg1 > 2 | Avg2 > 2)
+  )
+
+fn <- "Pax6_iSyTE_DEG_Counts.csv"
+path <- paste(results, fn, sep="/")
+result_files <- append(result_files, path)
+pax6.deg_master %>% 
+  filter(Filtered == "ribo" & Partition == "Pair") %>%
+  group_by(Test, Group_1, Group_2) %>%
+  summarise(
+    Total_OBS = n() ,#length(unique(hs_symbol)),
+    Total_DEG = sum(abs(logFC)>1 & FDR < 0.05 & is_bio),
+    DEG_In_p56 = sum(is_p56 & abs(logFC)>1 & FDR < 0.05 & is_bio),
+    UP_In_p56 = sum(is_p56 & (logFC > 1 & FDR < 0.05 & is_bio)),
+    DOWN_In_p56= sum(is_p56 & (logFC < -1 & FDR < 0.05 & is_bio)),
+    NON_DEG_In_p56=sum(is_p56 & !(abs(logFC)>1 & FDR < 0.05 & is_bio)),
+    NO_OBS_In_p56=length(setdiff(isyte_528_P56, gene_id))
   ) %>% write.csv(path)
-################### Cytokine-Cytokine Receptor Comparison ####################
-
-ccr_genes <-c(
-  "Il1rn", "Tnfsf8", "Ccl5", "Lepr", "Il17re", "Tnfrsf11b", "Ccl7", "Ccl17", 
-  "Cxcl14", "Eda2r", "Tgfbr2", "Il6ra", "Cd40", "Gdf15", "Bmpr1b", "Lif",
-  "Tgfb1", "Clcf1", "Il17rb", "Ccl2", "Cx3cl1", "Tnfrsf19", "Bmp6",
-  "Tnfrsf12a", "Ackr4", "Tnfrsf21", "Osmr", "Il3ra", "Csf1", "Relt", "Cxcl12",
-  "Ghr", "Tnfrsf11a", "Lifr", "Tnfrsf25", "Ctf1", "Tgfb3", "Tnfrsf1b", 
-  "Gdf10", "Il17rc", "Il10rb"
-)
-
-ccr_genes <- pax6.master$genes %>%
-  filter(SYMBOL %in% ccr_genes) %>%
-  select(gene_id, SYMBOL)
-
-
-ccr_genes <- inner_join(
-  ccr_genes, 
-  pax6.deg_master %>%
-    filter(
-      Test == "ExactTest" & 
-        Group_1 == "WTE" & 
-        Group_2 == "P6E" & 
-        Filtered == "ribo" &
-        Partition == "Pair" &
-        abs(logFC) > 1 &
-        FDR  < 0.05
-    ) %>%
-    select(
-      gene_id,
-      Pax6_logFC = logFC
-    ) 
-)
-
-ccr_genes <- inner_join(
-  ccr_genes, 
-  res[[2]] %>%
-    filter(
-      Test == "ExactTest" & 
-        Group_1 == "WT_0H_DBI" & 
-        Group_2 == "WT_24H_DBI" & 
-        Samples == "DBI_Wildtype" &
-        abs(logFC) > 1 &
-        FDR  < 0.05
-    ) %>%
-    select(
-      gene_id,
-      Injury_logFC = logFC
-    ) 
-)
-
-fn <- "Cytokine_Receptor_Pax6_X_LIRTS.jpg"
-path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
-result_files <- append(result_files, path)
-ggsave(
-  path,
-  ggplot(
-    ccr_genes, aes(x=Injury_logFC, y=Pax6_logFC)
-  ) + 
-    geom_point() + 
-    geom_label_repel(aes(label=SYMBOL)) +
-    xlab("Log Fold Change 24 vs 0 Hours After Injury") +
-    ylab("Log Fold Change Sey vs Wildtype Lens Epithelium") +
-    theme(
-      axis.text = element_text(size=12),
-      axis.title = element_text(size=12)
-    )
-)  
-
 
 ######################  Push script and data to Synapse ######################
 
 # Add this script to the code dir
 syn_script <- synFindEntityId(
-  "Pax6_DE_LIRTS_Analysis_TMM.R",
+  "Pax6_DE_iSyTE_Analysis.R",
   parent=syn_code_dir
 )
 
 if(is.null(syn_script)){
   syn_script <- File(
-    path="scripts/Pax6_DE_LIRTS_Analysis_TMM.R",
+    path="scripts/Pax6_DE_iSyTE_Analysis.R",
     parent=syn_code_dir
   )
 
@@ -604,8 +461,8 @@ if(is.null(syn_script)){
 synSetProvenance(
   syn_script,
   activity = Activity(
-    name = "Pax6_LIRTS_DEG",
-    description = "Genes that are both Pax6 and Injury Dependent",
+    name = "Pax6_iSyTE_DEG",
+    description = "Lens preferred Genes that are Pax6 Dependent",
     used=used_files
   )
 )
