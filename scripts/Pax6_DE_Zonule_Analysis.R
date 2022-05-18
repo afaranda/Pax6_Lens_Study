@@ -358,9 +358,9 @@ zonule_enrichment <- function(
   contingency <- test_data %>%
     group_by(Hom_Group) %>%
     summarize(
-      IS_PAX6 = any(IS_PAX6),
-      IS_ZONULE = any(IS_ZONULE)
-    ) %>% select(IS_PAX6, IS_ZONULE) %>% table()
+      IS_ZONULE = any(IS_ZONULE),
+      IS_PAX6 = any(IS_PAX6)
+    ) %>% select(IS_ZONULE, IS_PAX6) %>% table()
   print(contingency)
   print(fisher.test(contingency))
   
@@ -368,9 +368,9 @@ zonule_enrichment <- function(
   contingency <- test_data %>%
     group_by(Hom_Group) %>%
     summarize(
-      UP_PAX6 = any(UP_PAX6),
-      IS_ZONULE = any(IS_ZONULE)
-    ) %>% select(UP_PAX6, IS_ZONULE) %>% table()
+      IS_ZONULE = any(IS_ZONULE),
+      UP_PAX6 = any(UP_PAX6)
+    ) %>% select(IS_ZONULE,UP_PAX6) %>% table()
   print(contingency)
   print(fisher.test(contingency))
   
@@ -378,9 +378,9 @@ zonule_enrichment <- function(
   contingency <- test_data %>%
     group_by(Hom_Group) %>%
     summarize(
-      DN_PAX6 = any(DN_PAX6),
-      IS_ZONULE = any(IS_ZONULE)
-    ) %>% select(DN_PAX6, IS_ZONULE) %>% table()
+      IS_ZONULE = any(IS_ZONULE),
+      DN_PAX6 = any(DN_PAX6)
+    ) %>% select(IS_ZONULE,DN_PAX6,) %>% table()
   print(contingency)
   print(fisher.test(contingency))
   
@@ -440,7 +440,6 @@ fn <- "ZONULE_GENES_In_Pax6_Long_Table.csv"
 path <- paste(results, fn, sep="/")
 write.csv(pax6_zonule_deg_table, path)
 result_files <- append(result_files, path)
-
 
 pax6.deg_master <- pax6.deg_master %>% left_join(
   homology %>%
