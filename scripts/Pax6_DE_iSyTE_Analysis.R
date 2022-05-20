@@ -338,16 +338,16 @@ isyte_enrichment <- function(
   ## Prepare Overall Enrichment Table
   print("Overall overrepresentation -- all 528 iSyTE")
   contingency <- table(
-    IS_PAX6=test_data$IS_PAX6,
-    IS_ISYTE=test_data$IS_ISYTE
+    IS_ISYTE=test_data$IS_ISYTE,
+    IS_PAX6=test_data$IS_PAX6
   )
   print(contingency)
   print(fisher.test(contingency))
   
   print("Overall overrepresentation -- Lens Enriched at P56")
   contingency <- table(
-    IS_PAX6=test_data$IS_PAX6,
-    IS_ISYTE_DE=test_data$IS_ISYTE_DE
+    UP_ISYTE =test_data$UP_ISYTE,
+    IS_PAX6=test_data$IS_PAX6
   )
   print(contingency)
   print(fisher.test(contingency))
@@ -356,7 +356,7 @@ isyte_enrichment <- function(
   contingency <- table(
     test_data %>%
       filter(IS_PAX6 & IS_ISYTE) %>%
-      select(UP_PAX6, UP_ISYTE)
+      select(UP_ISYTE, UP_PAX6)
   )
   print(sum(contingency))
   print(contingency)
