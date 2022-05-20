@@ -306,22 +306,26 @@ compare_deg <- function(
       IS_PAX6 = (
         abs(pax6_logFC) > 1 & pax6_FDR < 0.05 &
           (pax6_Avg1 > 2 | pax6_Avg2 > 2) &
-          (abs(pax6_Avg1 - pax6_Avg2) > 2)
+          (abs(pax6_Avg1 - pax6_Avg2) > 2) &
+          !is.na(pax6_logFC)
       ),
       UP_PAX6 = (
         pax6_logFC > 1 & pax6_FDR < 0.05 &
           (pax6_Avg1 > 2 | pax6_Avg2 > 2) &
-          (abs(pax6_Avg1 - pax6_Avg2) > 2)
+          (abs(pax6_Avg1 - pax6_Avg2) > 2) &
+          !is.na(pax6_logFC)
       ),
       IS_INJURY = (
         abs(injury_logFC) > 1 & injury_FDR < 0.05 &
           (injury_Avg1 > 2 | injury_Avg2 > 2) &
-          (abs(injury_Avg1 - injury_Avg2) > 2)
+          (abs(injury_Avg1 - injury_Avg2) > 2) &
+          !is.na(injury_logFC)
       ),
       UP_INJURY = (
         injury_logFC > 1 & injury_FDR < 0.05 &
           (injury_Avg1 > 2 | injury_Avg2 > 2) &
-          (abs(injury_Avg1 - injury_Avg2) > 2)
+          (abs(injury_Avg1 - injury_Avg2) > 2) &
+          !is.na(injury_logFC)
       )
     ) %>%
     left_join(
@@ -370,7 +374,8 @@ contrasts=list(
   DNA1_WT6vs0H=c('WT_0H_DNA1', 'WT_6H_DNA1', 'DNA1_Wildtype'),
   DNA1_WT24vs0H=c('WT_0H_DNA1', 'WT_24H_DNA1', 'DNA1_Wildtype'),
   DNA2_WT120vs0H=c('WT_0H_DNA2', 'WT_120H_DNA2', 'DNA2_Wildtype'),
-  DNA3_WT72vs0H=c('WT_0H_DNA3', 'WT_72H_DNA3', 'DNA2_Wildtype')
+  DNA3_WT72vs0H=c('WT_0H_DNA3', 'WT_72H_DNA3', 'DNA2_Wildtype'),
+  LFC_P6vsWT = c('WTF', 'P6F')
 )
 
 
@@ -398,12 +403,22 @@ for(c in names(contrasts)){
       Group_2 == contrasts[[c]][2],
       Samples == contrasts[[c]][3]
     )
+  if(c == "LFC_P6vsWT"){
+    inj <- pax6.deg_master %>% filter(
+      Partition == "Pair",
+      Filtered == "ribo",
+      Group_1 == "WTF",
+      Group_2 == "P6F",
+      Test == "ExactTest"
+    )
+  }
   print(c)
   pax6_injury_deg_table <-bind_rows(
     pax6_injury_deg_table,
     compare_deg(pax6_deg, inj, result_label=c)
   )
 }
+
 sink()
 
 fn <- "LIRTS_DEG_In_Pax6_LEC_Long_Table.csv"
@@ -419,6 +434,17 @@ for(c in names(contrasts)){
       Group_2 == contrasts[[c]][2],
       Samples == contrasts[[c]][3]
     )
+  
+  if(c == "LFC_P6vsWT"){
+    inj <- pax6.deg_master %>% filter(
+      Partition == "Pair",
+      Filtered == "ribo",
+      Group_1 == "WTF",
+      Group_2 == "P6F",
+      Test == "ExactTest"
+    )
+  }
+  
   print(c)
   
   C1 <- "P6vsWT"
@@ -459,7 +485,7 @@ for(c in names(contrasts)){
     C1 = C1, C2 = C2, template =template, #"templates/overlap.xlsx",
     dg1 = pax6_deg, dg2 = inj, pref = "PCO", fname = path,
     dg2.me = 2, dg1.ds = "Pax6 HS vs WT LEC",
-    dg2.ds = "Injury", unlog = T,
+    dg2.ds = c, unlog = T,
     dg2.bioFun=bioSigRNASeq, idc = "gene_id",
     annot=pax6.master$genes %>% select(gene_id, SYMBOL, DESCRIPTION), #rnc=comp.meta[[c]][["rnc"]]
   )
@@ -498,7 +524,7 @@ data.frame(
         Contrast = factor(
           Contrast, levels=c(
             "DNA1_WT6vs0H", "DNA1_WT24vs0H", "DBI_WT24vs0H",
-            "DBI_WT48vs0H","DNA2_WT120vs0H"
+            "DBI_WT48vs0H","DNA2_WT120vs0H", "LFC_P6vsWT"
           )
         )
       ) %>% 
