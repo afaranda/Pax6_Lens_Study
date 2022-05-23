@@ -524,7 +524,8 @@ data.frame(
         Contrast = factor(
           Contrast, levels=c(
             "DNA1_WT6vs0H", "DNA1_WT24vs0H", "DBI_WT24vs0H",
-            "DBI_WT48vs0H","DNA2_WT120vs0H", "LFC_P6vsWT"
+            "DBI_WT48vs0H","DNA2_WT120vs0H", "DNA3_WT72vs0H",
+            "LFC_P6vsWT"
           )
         )
       ) %>% 
@@ -536,7 +537,8 @@ data.frame(
         values_fill = "Not Observed"
       ),
     by="gene_id"
-  ) %>% write.csv(path)
+  ) -> pivoted 
+pivoted %>% write.csv(path)
 ################### Cytokine-Cytokine Receptor Comparison ####################
 
 ccr_genes <-c(
@@ -606,7 +608,18 @@ ggsave(
       axis.title = element_text(size=12)
     )
 )  
-
+################### Fibrotic Mediators / Cytokines table #####################
+inflammation_fibrosis_genes <-c(
+  "Ccl5",  "Ccl7", "Ccl17","Tgfbr2", "Gdf15", "Tgfb1", "Ccl2",
+  "Csf1", "Tnfrsf25", "Tgfb3", "Itgb8", "Col1a1",
+  "Fn1", "Itga5", "Thbs1", "Thbs2"
+)
+fn <- "Inflammation_and_Fibrosis_Gene_Table_Pax6_X_LIRTS.csv"
+path <- paste(results, fn, sep="/")
+write.csv(pax6_injury_deg_table, path)
+result_files <- append(result_files, path)
+pivoted %>% filter(SYMBOL %in% inflammation_fibrosis_genes)%>%
+write.csv("inflammation_fibrosis_genes")
 
 ######################  Push script and data to Synapse ######################
 

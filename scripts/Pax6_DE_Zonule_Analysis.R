@@ -399,6 +399,9 @@ zonule_enrichment <- function(
   )
 }
 
+zonules %>% 
+  group_by(Hom_Group) %>%
+  filter(n() > 1)
 
 # Define A list of named contrasts; each element points to a vector with
 # a pair of group labels. Positive fold changes will be associated
