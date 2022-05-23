@@ -225,8 +225,6 @@ writeDescTables<-function(
   return(wb)
 }
 
-
-i
 # Function that Generates a spreadsheet comparing results from two
 # pairsiwe contrasts. 
 
