@@ -1,12 +1,12 @@
 ##############################################################################
 #                                                                            #
-#  File: Pax6_DE_LIRTS_Analysis_TMM.R                                        #
+#  File: Pax6_DE_Aging_Analysis_TMM.R                                        #
 #  Author: Adam Faranda                                                      #
 #  Created: June 18, 2020                                                    #
 #  Purpose:                                                                  #
 #       Identify Pax6 Dependent Genes in LEC that are also subject to injury #
-#       dependent differential expression in the LIRTS data. Identify        #
-#       the post surgical interval in the LIRTS that is most similar to Pax6 #
+#       dependent differential expression in the Aging data. Identify        #
+#       the post surgical interval in the Aging that is most similar to Pax6 #
 #       haploinsufficiency. Identify Pax6 Targets that are differentially    #
 #       expressed during mechanical injury, and which of those are also      #
 #       differentially expressed in Pax6 haploinsufficient lenses            #
@@ -30,7 +30,7 @@ source('scripts/Wrap_edgeR_Functions.R')
 source('scripts/Excel_Write_Functions.R')
 
 wd<-getwd()
-results<-paste(wd,'results/LIRTS_Analysis',sep='/')
+results<-paste(wd,'results/Aging_Analysis',sep='/')
 if(!dir.exists(results)){
   dir.create(results)
 }
@@ -42,13 +42,14 @@ synLogin()
 syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
 syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
+syn_aging_dir <- synFindEntityId("data", parent=syn_project)
 syn_fig_dir <- synFindEntityId("Figures", parent=syn_project)
 syn_deg_tbl_dir <- synFindEntityId("DEG_Tables", parent = syn_project)
-syn_deg_sps_dir <- synFindEntityId("Pax6_LIRTS_Analysis", parent = syn_project)
+syn_deg_sps_dir <- synFindEntityId("Pax6_Aging_Analysis", parent = syn_project)
 
 if(is.null(syn_deg_sps_dir)){
   folder <- Folder(
-    name="Pax6_LIRTS_Analysis",
+    name="Pax6_Aging_Analysis",
     parent=syn_project
   )
   syn_deg_sps_dir <- synStore(folder)
@@ -123,41 +124,110 @@ if(file.exists("results/pax6_deg_tables.Rdata")){
   stop("Run Generate_Pax6_DEG_Tables.R first")
 }
 
-########################## Load LIRTS Deg Tables #############################
+########################## Load Aging Deg Tables #############################
 
 ### For now, use a set of previously generated DEG Tables
-### Next week: Integrate the LIRTS Deg Table script with this project
+### Next week: Integrate the Aging Deg Table script with this project
 
-syn_lirts_dgelists <- synFindEntityId(
-  "LIRTS_master_dgelist.Rdata",
+syn_aging_dgelists <- synFindEntityId(
+  "aging_master_dgelists.Rdata",
   parent=syn_data_dir
 )
 
-if(file.exists('data/LIRTS_master_dgelist.Rdata')){
-  load('data/LIRTS_master_dgelist.Rdata')
-} else if(!is.null(syn_lirts_dgelists)){
+if(file.exists('data/aging_master_dgelists.Rdata')){
+  load('data/aging_master_dgelists.Rdata')
+} else if(!is.null(syn_aging_dgelists)){
   synGet(
-    syn_lirts_dgelists, downloadLocation=data_dir
+    syn_aging_dgelists, downloadLocation=data_dir
   )
-  load('data/LIRTS_master_dgelist.Rdata')
+  load('data/aging_master_dgelists.Rdata')
 }else{
   stop("Run Prepare_Expression_DGELists.R first")
 }
 
-syn_lirts_deg_master <- synFindEntityId(
-  "LIRTS_Master_DEG_Table.Rdata", 
+syn_aging_deg_master <- synFindEntityId(
+  "Aging_Master_DEG_Table.Rdata", 
   parent=syn_deg_tbl_dir
 )
 
-if(file.exists("results/")){
-  load("results/LIRTS_Master_DEG_Table.Rdata")
-} else if(!is.null(syn_lirts_deg_master)){
+if(file.exists("results/Aging_Master_DEG_Table.Rdata")){
+  load("results/Aging_Master_DEG_Table.Rdata")
+} else if(!is.null(syn_aging_deg_master)){
   synGet(
-    syn_lirts_deg_master, downloadLocation="results"
+    syn_aging_deg_master, downloadLocation="results"
   )
-  load("results/LIRTS_Master_DEG_Table.Rdata")
+  load("results/Aging_Master_DEG_Table.Rdata")
 }else{
-  stop("Run Generate_LIRTS_DEG_Tables.R first")
+  aging.deg_master<-data.frame()  # Empty data frame to store all DEG results
+  aging.disp_master<-data.frame()  # Empty data frame to store all DEG results
+  for ( filt in  c("ribo")){
+    if (filt != "degnorm"){
+      master <- aging.master
+      # Get subset of samples with target filtering criteria
+      dge <- master[,master$samples$ribo_filter == filt ]
+      dge$samples$group <- factor(
+        paste0(
+          ifelse(dge$samples$age == "24mo","A","Y"), 
+          gsub("(i|b|p)","", dge$samples$cell_type),
+          gsub("H", "", dge$samples$injury_status)
+        ), levels=c("YE0", "YE24", "AE0", "AE24", "YF0", "AF0")
+      )
+    } 
+
+    for(                              # Iterate over relevant contrasts
+      cn in list(
+        c("YE0", "YE24"),
+        c("YE0", "YF0"),
+        c("YE0", "AE0"),
+        c("YE24", "AE24"),
+        c("YF0", "AF0"),
+        c("AE0", "AE24"),
+        c("AE0", "AF0")
+      )
+    ){
+      if(filt == "degnorm"){
+        dge <- aging.master.dgn_pair[[paste0(cn[2], "vs",cn[1])]]
+        dge$samples$group <- factor(
+          paste0(
+            ifelse(dge$samples$age == "24mo","A","Y"), 
+            gsub("(i|b|p)","", dge$samples$cell_type),
+            gsub("H", "", dge$samples$injury_status)
+          ), levels=cn
+        )
+      }
+      
+      set <- subsetDGEListByGroups(
+        dge, groups=c(cn[1], cn[2]),
+        norm=ifelse(filt=="degnorm", "NONE", "TMM")
+      )
+      
+      aging.disp_master <- bind_rows(
+        aging.disp_master,
+        data.frame(
+          Partition = "Pair",
+          Filtered = filt,
+          Contrast = paste0(cn[2], "v", cn[1]),
+          Disp = set[["dge"]]$common.dispersion
+        )
+      )    
+      for(obj in c("dge", "fit")){
+        aging.deg_master <- bind_rows(
+          aging.deg_master, 
+          genPairwiseDegTable(set[[obj]], cn[1],cn[2], set[["design"]]) %>%
+            dplyr::mutate(Filtered = filt, Partition = "Pair")
+        ) %>% tibble::remove_rownames()
+      }
+    }
+  }
+  
+  fn <- "Aging_Master_DEG_Table.Rdata"
+  path <- paste(results, fn, sep="/")
+  result_files <- append(result_files, path)
+  save(
+    list=c("aging.deg_master", "aging.disp_master"), 
+    file=path
+  )
+  
 }
 
 
@@ -253,8 +323,8 @@ used_files <- list(
   syn_trrust_targets,
   syn_dgelists,
   syn_deg_master,
-  syn_lirts_dgelists,
-  syn_lirts_deg_master
+  syn_aging_dgelists,
+  syn_aging_deg_master
 )
 
 
@@ -271,7 +341,7 @@ used_files <- list(
 compare_deg <- function(
   pax6_deg = data.frame(),
   injury_deg = data.frame(),
-  result_label = "DNA1_6_Hours_Post_Injury"
+  result_label = "Aging_LEC"
 ){
 
   ### Run the Fisher's Exact Test for Overrepresentation
@@ -369,269 +439,103 @@ compare_deg <- function(
 # a pair of group labels. Positive fold changes will be associated
 # with the second group listed. 
 contrasts=list(
-  DBI_WT24vs0H=c('WT_0H_DBI', 'WT_24H_DBI', 'DBI_Wildtype'),
-  DBI_WT48vs0H=c('WT_0H_DBI', 'WT_48H_DBI', 'DBI_Wildtype'),
-  DNA1_WT6vs0H=c('WT_0H_DNA1', 'WT_6H_DNA1', 'DNA1_Wildtype'),
-  DNA1_WT24vs0H=c('WT_0H_DNA1', 'WT_24H_DNA1', 'DNA1_Wildtype'),
-  DNA2_WT120vs0H=c('WT_0H_DNA2', 'WT_120H_DNA2', 'DNA2_Wildtype'),
-  DNA3_WT72vs0H=c('WT_0H_DNA3', 'WT_72H_DNA3', 'DNA2_Wildtype'),
-  LFC_P6vsWT = c('WTF', 'P6F')
+  Epithelium=c('WTE', 'P6E', 'YE0', 'AE0'),
+  Fibers=c('WTF', 'P6F', 'YF0', 'AF0')
 )
 
 
 ####### Iterate over contrasts and extract DE Results for Pax6 Targets #######
 ########### Calculate Fisher's Exact Test results for each contrast  #########
 result_files <- c()
-pax6_deg <- pax6.deg_master %>% filter(
-  Partition == "Pair",
-  Filtered == "ribo",
-  Group_1 == "WTE",
-  Group_2 == "P6E",
-  Test == "ExactTest"
-)
 
-pax6_injury_deg_table <- data.frame()
-fn <- "LIRTS_Enrichment_In_Pax6_DEG.txt"
+
+pax6_aging_deg_table <- data.frame()
+fn <- "Aging_Enrichment_In_Pax6_DEG.txt"
 path <- paste(results, fn, sep="/")
 result_files <- append(result_files, path)
 sink(path)
 for(c in names(contrasts)){
-  inj <- res[[2]] %>%
-    filter(
-      Test == "ExactTest",
-      Group_1 == contrasts[[c]][1],
-      Group_2 == contrasts[[c]][2],
-      Samples == contrasts[[c]][3]
-    )
-  if(c == "LFC_P6vsWT"){
-    inj <- pax6.deg_master %>% filter(
-      Partition == "Pair",
-      Filtered == "ribo",
-      Group_1 == "WTF",
-      Group_2 == "P6F",
+  pax6_deg <- pax6.deg_master %>% filter(
+    Partition == "Pair" &
+      Filtered == "ribo" &
+      Group_1 == contrasts[[c]][1] &
+      Group_2 == contrasts[[c]][2] &
       Test == "ExactTest"
+  )
+  
+  inj <- aging.deg_master %>%
+    filter(
+      Test == "ExactTest" &
+        Partition == "Pair" &
+        Filtered == "ribo" &
+        Group_1 == contrasts[[c]][3] &
+        Group_2 == contrasts[[c]][4]
     )
-  }
   print(c)
-  pax6_injury_deg_table <-bind_rows(
-    pax6_injury_deg_table,
+  pax6_aging_deg_table <-bind_rows(
+    pax6_aging_deg_table,
     compare_deg(pax6_deg, inj, result_label=c)
   )
 }
 
 sink()
 
-fn <- "LIRTS_DEG_In_Pax6_LEC_Long_Table.csv"
+fn <- "Aging_DEG_In_Pax6_LEC_Long_Table.csv"
 path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
+write.csv(pax6_aging_deg_table, path)
 result_files <- append(result_files, path)
 ###################### Setup Intersection Spreadsheets #######################
 for(c in names(contrasts)){
-  inj <- res[[2]] %>%
-    filter(
-      Test == "ExactTest",
-      Group_1 == contrasts[[c]][1],
-      Group_2 == contrasts[[c]][2],
-      Samples == contrasts[[c]][3]
-    )
-  
-  if(c == "LFC_P6vsWT"){
-    inj <- pax6.deg_master %>% filter(
-      Partition == "Pair",
-      Filtered == "ribo",
-      Group_1 == "WTF",
-      Group_2 == "P6F",
+  pax6_deg <- pax6.deg_master %>% filter(
+    Partition == "Pair" &
+      Filtered == "ribo" &
+      Group_1 == contrasts[[c]][1] &
+      Group_2 == contrasts[[c]][2] &
       Test == "ExactTest"
+  )
+  
+  inj <- aging.deg_master %>%
+    filter(
+      Test == "ExactTest" &
+        Partition == "Pair" &
+        Filtered == "ribo" &
+        Group_1 == contrasts[[c]][3] &
+        Group_2 == contrasts[[c]][4]
     )
-  }
   
   print(c)
   
   C1 <- "P6vsWT"
   C2 <- paste0(
-    gsub(
-      "_DBI","",
-      gsub(
-        "_DNA1","",
-        gsub(
-          "_DNA2","",
-          gsub(
-            "_DNA3","",
-            contrasts[[c]][2]
-          )
-        )
-      )  
-    ) ,"vs",
-    gsub(
-      "_DBI","",
-      gsub(
-        "_DNA1","",
-        gsub(
-          "_DNA2","",
-          gsub(
-            "_DNA3","",
-            contrasts[[c]][1]
-          )
-        )
-      )  
-    )
+    contrasts[[c]][4],"vs",contrasts[[c]][3]
   )
-  template <- paste0("templates/Pax6_LEC_",c,"_overlap_template.xlsx")
+  template <- paste0("templates/Pax6_LEC_",C2,"_overlap_template.xlsx")
   fn <- paste0("Pax6_HS_vs_WT_X_",c,"DEG_Comparison.xlsx")
   path <- paste(results, fn, sep="/")
-  write.csv(pax6_injury_deg_table, path)
+  write.csv(pax6_aging_deg_table, path)
   result_files <- append(result_files, path)
   createMethodComparisonSpreadsheet(
     C1 = C1, C2 = C2, template =template, #"templates/overlap.xlsx",
     dg1 = pax6_deg, dg2 = inj, pref = "PCO", fname = path,
-    dg2.me = 2, dg1.ds = "Pax6 HS vs WT LEC",
+    dg2.me = 2, dg1.ds = "Pax6 HS vs WT",
     dg2.ds = c, unlog = T,
     dg2.bioFun=bioSigRNASeq, idc = "gene_id",
     annot=pax6.master$genes %>% select(gene_id, SYMBOL, DESCRIPTION), #rnc=comp.meta[[c]][["rnc"]]
   )
 }
 
-######################       Build Pivoted Table        ######################
-
-fn <- "LIRTS_DEG_In_Pax6_LEC_Injury_Resp_Summary.csv"
-path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
-result_files <- append(result_files, path)
-
-data.frame(
-  gene_id = pax6_injury_deg_table %>%
-    filter(IS_PAX6) %>%
-    pull(gene_id) %>% unique()
-) %>% 
-  left_join(
-    pax6_injury_deg_table %>% 
-      select(
-        gene_id, SYMBOL, DESCRIPTION, PAX6_TARGET,
-        matches("^pax6", ignore.case=F)) %>%
-      distinct(), 
-    by="gene_id"
-  ) %>%
-  left_join(
-    pax6_injury_deg_table %>% 
-      mutate(
-        Injury_Response = ifelse(
-          UP_INJURY, "Upregulated",
-          ifelse(
-            IS_INJURY, "Downregulated",
-            "Not DE"
-          )
-        ),
-        Contrast = factor(
-          Contrast, levels=c(
-            "DNA1_WT6vs0H", "DNA1_WT24vs0H", "DBI_WT24vs0H",
-            "DBI_WT48vs0H","DNA2_WT120vs0H", "DNA3_WT72vs0H",
-            "LFC_P6vsWT"
-          )
-        )
-      ) %>% 
-      select(gene_id, Contrast, Injury_Response) %>% 
-      pivot_wider(
-        id_cols = "==================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================gene_id", 
-        names_from="Contrast", 
-        values_from = "Injury_Response", 
-        values_fill = "Not Observed"
-      ),
-    by="gene_id"
-  ) -> pivoted 
-pivoted %>% write.csv(path)
-################### Cytokine-Cytokine Receptor Comparison ####################
-
-ccr_genes <-c(
-  "Il1rn", "Tnfsf8", "Ccl5", "Lepr", "Il17re", "Tnfrsf11b", "Ccl7", "Ccl17", 
-  "Cxcl14", "Eda2r", "Tgfbr2", "Il6ra", "Cd40", "Gdf15", "Bmpr1b", "Lif",
-  "Tgfb1", "Clcf1", "Il17rb", "Ccl2", "Cx3cl1", "Tnfrsf19", "Bmp6",
-  "Tnfrsf12a", "Ackr4", "Tnfrsf21", "Osmr", "Il3ra", "Csf1", "Relt", "Cxcl12",
-  "Ghr", "Tnfrsf11a", "Lifr", "Tnfrsf25", "Ctf1", "Tgfb3", "Tnfrsf1b", 
-  "Gdf10", "Il17rc", "Il10rb"
-)
-
-ccr_genes <- pax6.master$genes %>%
-  filter(SYMBOL %in% ccr_genes) %>%
-  select(gene_id, SYMBOL)
-
-
-ccr_genes <- inner_join(
-  ccr_genes, 
-  pax6.deg_master %>%
-    filter(
-      Test == "ExactTest" & 
-        Group_1 == "WTE" & 
-        Group_2 == "P6E" & 
-        Filtered == "ribo" &
-        Partition == "Pair" &
-        abs(logFC) > 1 &
-        FDR  < 0.05
-    ) %>%
-    select(
-      gene_id,
-      Pax6_logFC = logFC
-    ) 
-)
-
-ccr_genes <- inner_join(
-  ccr_genes, 
-  res[[2]] %>%
-    filter(
-      Test == "ExactTest" & 
-        Group_1 == "WT_0H_DBI" & 
-        Group_2 == "WT_24H_DBI" & 
-        Samples == "DBI_Wildtype" &
-        abs(logFC) > 1 &
-        FDR  < 0.05
-    ) %>%
-    select(
-      gene_id,
-      Injury_logFC = logFC
-    ) 
-)
-
-fn <- "Cytokine_Receptor_Pax6_X_LIRTS.jpg"
-path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
-result_files <- append(result_files, path)
-ggsave(
-  path,
-  ggplot(
-    ccr_genes, aes(x=Injury_logFC, y=Pax6_logFC)
-  ) + 
-    geom_point() + 
-    geom_label_repel(aes(label=SYMBOL)) +
-    xlab("Log Fold Change 24 vs 0 Hours After Injury") +
-    ylab("Log Fold Change Sey vs Wildtype Lens Epithelium") +
-    theme(
-      axis.text = element_text(size=12),
-      axis.title = element_text(size=12)
-    )
-)  
-################### Fibrotic Mediators / Cytokines table #####################
-inflammation_fibrosis_genes <-c(
-  "Ccl5",  "Ccl7", "Ccl17","Tgfbr2", "Gdf15", "Tgfb1", "Ccl2",
-  "Csf1", "Tnfrsf25", "Tgfb3", "Itgb8", "Itga1", "Col1a1",
-  "Fn1", "Itga5", "Thbs1", "Thbs2"
-)
-fn <- "Inflammation_and_Fibrosis_Gene_Table_Pax6_X_LIRTS.csv"
-path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
-result_files <- append(result_files, path)
-pivoted %>% filter(SYMBOL %in% inflammation_fibrosis_genes) %>%
-write.csv(path)
 
 ######################  Push script and data to Synapse ######################
 
 # Add this script to the code dir
 syn_script <- synFindEntityId(
-  "Pax6_DE_LIRTS_Analysis_TMM.R",
+  "Pax6_DE_Aging_Analysis_TMM.R",
   parent=syn_code_dir
 )
 
 if(is.null(syn_script)){
   syn_script <- File(
-    path="scripts/Pax6_DE_LIRTS_Analysis_TMM.R",
+    path="scripts/Pax6_DE_Aging_Analysis_TMM.R",
     parent=syn_code_dir
   )
 
@@ -643,7 +547,7 @@ if(is.null(syn_script)){
 synSetProvenance(
   syn_script,
   activity = Activity(
-    name = "Pax6_LIRTS_DEG",
+    name = "Pax6_Aging_DEG",
     description = "Genes that are both Pax6 and Injury Dependent",
     used=used_files
   )
