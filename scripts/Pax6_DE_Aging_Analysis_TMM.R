@@ -134,6 +134,7 @@ syn_aging_dgelists <- synFindEntityId(
   parent=syn_data_dir
 )
 
+result_files <- c()
 if(file.exists('data/aging_master_dgelists.Rdata')){
   load('data/aging_master_dgelists.Rdata')
 } else if(!is.null(syn_aging_dgelists)){
@@ -323,8 +324,7 @@ used_files <- list(
   syn_trrust_targets,
   syn_dgelists,
   syn_deg_master,
-  syn_aging_dgelists,
-  syn_aging_deg_master
+  syn_aging_dgelists
 )
 
 
@@ -409,8 +409,8 @@ compare_deg <- function(
   ## Prepare Overall Enrichment Table
   print("Overall overrepresentation")
   contingency <- table(
-    test_data$IS_PAX6,
-    test_data$IS_INJURY
+    test_data$IS_INJURY,
+    test_data$IS_PAX6
   )
   print(contingency)
   print(fisher.test(contingency))
@@ -419,7 +419,7 @@ compare_deg <- function(
   contingency <- table(
     test_data %>%
       filter(IS_PAX6 & IS_INJURY) %>%
-      select(UP_PAX6, UP_INJURY)
+      select(UP_INJURY, UP_PAX6)
   )
   print(sum(contingency))
   print(contingency)
