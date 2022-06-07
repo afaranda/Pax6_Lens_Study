@@ -247,6 +247,38 @@ combined_targets <- bind_rows(
     )
 )
 
+########################### Load KEGG Pathway data ###########################
+kegg_mmu <- ROntoTools::keggPathwayGraphs(
+  organism = "mmu"
+)
+
+mmu04060_entrez <- as.numeric(
+  gsub(
+    "mmu:", "",
+    kegg_mmu[['path:mmu04060']]@nodes
+  )
+)
+
+mmu04060_genes <- AnnotationDbi::select(
+  org.Mm.eg.db,
+  columns = c("SYMBOL", "GENENAME"),
+  keys=as.character(mmu04060_entrez),
+  keytype = "ENTREZID"
+)
+
+mmu04151_entrez <- as.numeric(
+  gsub(
+    "mmu:", "",
+    kegg_mmu[['path:mmu04151']]@nodes
+  )
+)
+
+mmu04151_genes <- AnnotationDbi::select(
+  org.Mm.eg.db,
+  columns = c("SYMBOL", "GENENAME"),
+  keys=as.character(mmu04151_entrez),
+  keytype = "ENTREZID"
+)
 ## Final list of existing data files used by this script
 used_files <- list(
   syn_sun_targets,
@@ -493,6 +525,7 @@ for(c in names(contrasts)){
 
 ######################       Build Pivoted Table        ######################
 
+#### THIS TABLE IS WRONG
 fn <- "LIRTS_DEG_In_Pax6_LEC_Injury_Resp_Summary.csv"
 path <- paste(results, fn, sep="/")
 write.csv(pax6_injury_deg_table, path)
@@ -510,7 +543,7 @@ data.frame(
         matches("^pax6", ignore.case=F)) %>%
       distinct(), 
     by="gene_id"
-  ) %>%
+  ) %>% 
   left_join(
     pax6_injury_deg_table %>% 
       mutate(
@@ -531,7 +564,7 @@ data.frame(
       ) %>% 
       select(gene_id, Contrast, Injury_Response) %>% 
       pivot_wider(
-        id_cols = "==================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================================gene_id", 
+        id_cols = "gene_id", 
         names_from="Contrast", 
         values_from = "Injury_Response", 
         values_fill = "Not Observed"
@@ -590,9 +623,8 @@ ccr_genes <- inner_join(
     ) 
 )
 
-fn <- "Cytokine_Receptor_Pax6_X_LIRTS.jpg"
+fn <- "Cytokine_Receptor_Pax6_X_LIRTS_Focused.jpg"
 path <- paste(results, fn, sep="/")
-write.csv(pax6_injury_deg_table, path)
 result_files <- append(result_files, path)
 ggsave(
   path,
@@ -607,7 +639,8 @@ ggsave(
       axis.text = element_text(size=12),
       axis.title = element_text(size=12)
     )
-)  
+)
+
 ################### Fibrotic Mediators / Cytokines table #####################
 inflammation_fibrosis_genes <-c(
   "Ccl5",  "Ccl7", "Ccl17","Tgfbr2", "Gdf15", "Tgfb1", "Ccl2",
@@ -618,8 +651,98 @@ fn <- "Inflammation_and_Fibrosis_Gene_Table_Pax6_X_LIRTS.csv"
 path <- paste(results, fn, sep="/")
 write.csv(pax6_injury_deg_table, path)
 result_files <- append(result_files, path)
-pivoted %>% filter(SYMBOL %in% inflammation_fibrosis_genes) %>%
-write.csv(path)
+#pivoted %>% filter(SYMBOL %in% inflammation_fibrosis_genes) %>%
+#write.csv(path)
+
+########################## Plot All Genes comparison #########################
+
+## for each deg table:
+## get log fold changes and FDR values of all genes expressed
+## at biologically significant levels in at least one condition
+## and inner join DEG Tables on gene_id. Add gene symbols, and indictor column
+## to flag genes that should get a call out.
+pathways <- list(PI3K = mmu04151_genes, Cytokine = mmu04060_genes)
+for(pw in names(pathways)){
+  for(c in names(contrasts)){
+    inj <- res[[2]] %>%
+      filter(
+        Test == "ExactTest",
+        Group_1 == contrasts[[c]][1],
+        Group_2 == contrasts[[c]][2],
+        Samples == contrasts[[c]][3]
+      )
+    if(c == "LFC_P6vsWT"){
+      inj <- pax6.deg_master %>% filter(
+        Partition == "Pair",
+        Filtered == "ribo",
+        Group_1 == "WTF",
+        Group_2 == "P6F",
+        Test == "ExactTest"
+      )
+    }
+    
+    print(c)
+    df <- inner_join(
+      pax6_deg %>%
+        filter(Avg1 > 2 | Avg2 > 2) %>%
+        filter(FDR < 0.99)  %>%
+        select(gene_id, Pax6_logFC = logFC, pax6_fdr=FDR) ,
+      inj %>%
+        filter(Avg1 > 2 | Avg2 > 2) %>%
+        filter(FDR < 0.99) %>%
+        select(gene_id, Injury_logFC = logFC, inj_fdr=FDR),
+      by="gene_id"
+    ) %>% inner_join(
+      pax6.master$genes %>%
+        select(gene_id, SYMBOL),
+      by="gene_id"
+    ) %>% mutate(
+      SYMBOL = ifelse(SYMBOL %in% pw, SYMBOL, "")
+    ) %>% rowwise() %>%
+      mutate(
+        DIST = sqrt(sum(c(Injury_logFC^2), Pax6_logFC^2))
+      ) %>% group_by() %>%
+      mutate(
+        DIST = (DIST / max(DIST))
+      ) %>% rowwise() %>%
+      mutate(
+        ALPHA = ifelse(SYMBOL == "", max(c(DIST, 0.05)), 1)
+      ) %>%
+      group_by() %>%
+      mutate(
+        SIZE = ifelse(SYMBOL == "",1, 2),
+        COLOR = ifelse(
+          (Pax6_logFC > 0 & Injury_logFC > 0), "darkred",ifelse(
+            (Pax6_logFC < 0 & Injury_logFC < 0), "blue",
+            "black"
+          )
+        )
+      ) %>%
+      mutate(
+        COLOR = ifelse(SYMBOL == "", "black", COLOR)
+      )
+    
+    fn <- paste0("Cytokine_Receptor_Pax6_X_",c,"_All_Genes.jpg")
+    path <- paste(results, fn, sep="/")
+    result_files <- append(result_files, path)
+    
+    p <- ggplot(df,aes(x=Injury_logFC, y=Pax6_logFC)) +
+      geom_point(alpha = df$ALPHA, size = df$SIZE, colour = df$COLOR) +
+      geom_label_repel(aes(label=SYMBOL), max.overlaps = 1000) +
+      xlab("Log Fold Change 24 vs 0 Hours After Injury") +
+      ylab("Log Fold Change Sey vs Wildtype Lens Epithelium") +
+      theme(
+        axis.text = element_text(size=12),
+        axis.title = element_text(size=12),
+        legend.position = "none"
+      )
+    print(nrow(df))
+    ggsave( path, p, height=8, width = 8)
+  }
+}
+  ## Use ggplot2 to to construct the following
+
+
 
 ######################  Push script and data to Synapse ######################
 
