@@ -260,7 +260,7 @@ mmu04060_entrez <- as.numeric(
 )
 
 mmu04060_genes <- AnnotationDbi::select(
-  org.Mm.eg.db,
+  org.Mm.eg.db::org.Mm.eg.db,
   columns = c("SYMBOL", "GENENAME"),
   keys=as.character(mmu04060_entrez),
   keytype = "ENTREZID"
@@ -274,7 +274,7 @@ mmu04151_entrez <- as.numeric(
 )
 
 mmu04151_genes <- AnnotationDbi::select(
-  org.Mm.eg.db,
+  org.Mm.eg.db::org.Mm.eg.db,
   columns = c("SYMBOL", "GENENAME"),
   keys=as.character(mmu04151_entrez),
   keytype = "ENTREZID"
@@ -685,11 +685,11 @@ for(pw in names(pathways)){
     df <- inner_join(
       pax6_deg %>%
         filter(Avg1 > 2 | Avg2 > 2) %>%
-        filter(FDR < 0.99)  %>%
+        filter(FDR < 0.05)  %>%
         select(gene_id, Pax6_logFC = logFC, pax6_fdr=FDR) ,
       inj %>%
         filter(Avg1 > 2 | Avg2 > 2) %>%
-        filter(FDR < 0.99) %>%
+        filter(FDR < 0.05) %>%
         select(gene_id, Injury_logFC = logFC, inj_fdr=FDR),
       by="gene_id"
     ) %>% inner_join(
@@ -697,7 +697,7 @@ for(pw in names(pathways)){
         select(gene_id, SYMBOL),
       by="gene_id"
     ) %>% mutate(
-      SYMBOL = ifelse(SYMBOL %in% pw, SYMBOL, "")
+      SYMBOL = ifelse(SYMBOL %in% pathways[[pw]]$SYMBOL, SYMBOL, "")
     ) %>% rowwise() %>%
       mutate(
         DIST = sqrt(sum(c(Injury_logFC^2), Pax6_logFC^2))
@@ -722,7 +722,7 @@ for(pw in names(pathways)){
         COLOR = ifelse(SYMBOL == "", "black", COLOR)
       )
     
-    fn <- paste0("Cytokine_Receptor_Pax6_X_",c,"_All_Genes.jpg")
+    fn <- paste0(pw,"_Pax6_X_",c,"_All_Genes.jpg")
     path <- paste(results, fn, sep="/")
     result_files <- append(result_files, path)
     
