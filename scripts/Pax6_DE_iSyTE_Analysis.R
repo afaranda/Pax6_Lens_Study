@@ -21,6 +21,7 @@ library(dplyr)
 library(tibble)
 library(synapser)
 library(ggrepel)
+library(EnhancedVolcano)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
@@ -438,6 +439,63 @@ pax6.deg_master %>%
     NON_DEG_In_p56=sum(is_p56 & !(abs(logFC)>1 & FDR < 0.05 & is_bio)),
     NO_OBS_In_p56=length(setdiff(isyte_528_P56, gene_id))
   ) %>% write.csv(path)
+
+############ Generate Enhanced Volcano Plot Highlighting iSyTE DEG #############
+
+pax6_deg <- pax6.deg_master %>%
+  filter(Filtered == "ribo" & Partition == "Pair" & Test == "ExactTest") %>%
+  filter(Group_1 == "WTE" & Group_2 == "P6E") %>%
+  filter(Avg1 >2 | Avg2 > 2) %>%
+  inner_join(
+    pax6.master$genes %>%
+      select(gene_id, SYMBOL),
+    by="gene_id"
+  ) %>% mutate(
+    IS_ISYTE = (gene_id %in% isyte_528_P56 ) & ( abs(logFC) > 1) & (FDR < 0.05)
+  ) %>% filter(IS_ISYTE)
+
+fn <- "ISYTE_GENES_DE_IN_PAX6_LEC.jpg"
+path <- paste(results, fn, sep="/")
+result_files <- append(result_files, path)
+
+p <- EnhancedVolcano(
+  pax6_deg %>% filter(IS_ISYTE),
+  x = "logFC", y="FDR", lab=pax6_deg$SYMBOL,
+  selectLab = pax6_deg %>% filter(IS_ISYTE) %>% pull(SYMBOL),
+  drawConnectors = T, max.overlaps = 1000,
+  pCutoff = 5*10^-2, 
+  title = "Lens Preferred Genes influenced by Pax6 haploinsufficiency in LEC",
+  subtitle = ""
+)
+ggsave(path, plot=p, width=12, height=7)
+
+pax6_deg <- pax6.deg_master %>%
+  filter(Filtered == "ribo" & Partition == "Pair" & Test == "ExactTest") %>%
+  filter(Group_1 == "WTF" & Group_2 == "P6F") %>%
+  filter(Avg1 >2 | Avg2 > 2) %>%
+  inner_join(
+    pax6.master$genes %>%
+      select(gene_id, SYMBOL),
+    by="gene_id"
+  ) %>% mutate(
+    IS_ISYTE = (gene_id %in% isyte_528_P56 ) & ( abs(logFC) > 1) & (FDR < 0.05)
+  ) %>% filter(IS_ISYTE)
+
+fn <- "ISYTE_GENES_DE_IN_PAX6_LFC.jpg"
+path <- paste(results, fn, sep="/")
+result_files <- append(result_files, path)
+
+p <- EnhancedVolcano(
+  pax6_deg %>% filter(IS_ISYTE),
+  x = "logFC", y="FDR", lab=pax6_deg$SYMBOL,
+  selectLab = pax6_deg %>% filter(IS_ISYTE) %>% pull(SYMBOL),
+  drawConnectors = T, max.overlaps = 1000,
+  pCutoff = 5*10^-2, 
+  title = "Lens Preferred Genes influenced by Pax6 haploinsufficiency in LFC",
+  subtitle = ""
+)
+ggsave(path, plot=p, width=12, height=7)
+
 
 ######################  Push script and data to Synapse ######################
 
