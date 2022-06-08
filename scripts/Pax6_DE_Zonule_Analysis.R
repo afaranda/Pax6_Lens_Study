@@ -16,6 +16,7 @@ library(dplyr)
 library(tibble)
 library(synapser)
 library(ggrepel)
+library(EnhancedVolcano)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
@@ -487,6 +488,35 @@ pax6.deg_master %>%
     NO_OBS_In_ZONULE=length(setdiff(zonules$Mouse.gene.stable.ID, gene_id))
   ) %>% write.csv(path)
 result_files <- append(result_files, path)
+
+############ Generate Enhanced Volcano Plot Highlighting Zonules #############
+
+pax6_deg <- pax6.deg_master %>%
+  filter(Filtered == "ribo" & Partition == "Pair" & Test == "ExactTest") %>%
+  filter(Group_1 == "WTE" & Group_2 == "P6E") %>%
+  filter(Avg1 >2 | Avg2 > 2) %>%
+  inner_join(
+    pax6.master$genes %>%
+      select(gene_id, SYMBOL),
+    by="gene_id"
+  ) %>% mutate(
+    IS_ZONULE = (gene_id %in% zonules$Mouse.gene.stable.ID ) & ( abs(logFC) > 1) & (FDR < 0.05)
+  )%>% filter(IS_ZONULE)
+
+fn <- "ZONULE_GENES_DE_IN_PAX6_LEC.jpg"
+path <- paste(results, fn, sep="/")
+result_files <- append(result_files, path)
+
+p <- EnhancedVolcano(
+  pax6_deg %>% filter(IS_ZONULE),
+  x = "logFC", y="FDR", lab=pax6_deg$SYMBOL,
+  selectLab = pax6_deg %>% filter(IS_ZONULE) %>% pull(SYMBOL),
+  drawConnectors = T, max.overlaps = 1000,
+  pCutoff = 5*10^-2, 
+  title = "Zonular Proteins influenced by Pax6 haploinsufficiency",
+  subtitle = ""
+)
+ggsave(path, plot=p, width=12, height=7)
 
 ######################  Push script and data to Synapse ######################
 
