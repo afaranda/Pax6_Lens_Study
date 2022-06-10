@@ -425,6 +425,39 @@ compare_deg <- function(
   print(contingency)
   print(fisher.test(contingency))
   
+  ## Report Fold Change Correlations
+  print("Fold Change Corelation -- all common genes")
+  print(
+    cor.test(
+      test_data$pax6_logFC,
+      test_data$injury_logFC
+    )
+  )
+  
+  print("Fold Change Corelation -- biologically significant")
+  test_bio <- test_data %>%
+    filter(
+      (pax6_Avg1 > 2 | pax6_Avg2 > 2) &
+        (abs(pax6_Avg1 - pax6_Avg2) > 2)
+    )
+  
+  print(
+    cor.test(
+      test_bio$pax6_logFC,
+      test_bio$injury_logFC
+    )
+  )
+  
+  print("Fold Change Corelation -- biologically significant, FDR < 0.05")
+  test_bio <- test_bio %>% filter( pax6_FDR < 0.05 & injury_FDR < 0.05)
+  
+  print(
+    cor.test(
+      test_bio$pax6_logFC,
+      test_bio$injury_logFC
+    )
+  )
+  
   return(
     test_data %>%
       filter(IS_PAX6 & IS_INJURY) %>%
@@ -440,7 +473,9 @@ compare_deg <- function(
 # with the second group listed. 
 contrasts=list(
   Epithelium=c('WTE', 'P6E', 'YE0', 'AE0'),
-  Fibers=c('WTF', 'P6F', 'YF0', 'AF0')
+  Fibers=c('WTF', 'P6F', 'YF0', 'AF0'),
+  Young_Injury=c('WTE', 'P6E', 'YE0', 'YE24'),
+  Aged_Injury=c('WTE', 'P6E', 'AE0', 'AE24')
 )
 
 
