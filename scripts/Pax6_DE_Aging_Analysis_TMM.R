@@ -14,20 +14,24 @@
 ##############################################################################
 
 ################## Load Libraries and Source Dependencies ####################
+library(ROntoTools)
+library(org.Mm.eg.db)
 library(edgeR)
 library(tidyr)
 library(tibble)
 library(dplyr)
 library(tibble)
-library(synapser)
+#library(synapser)   # Use reticulate band-aid
 library(ggrepel)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
 setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
+source('scripts/synapse_reticulate_wrapper.R')
 source('scripts/Overlap_Comparison_Functions.R')
 source('scripts/Wrap_edgeR_Functions.R')
 source('scripts/Excel_Write_Functions.R')
+
 
 wd<-getwd()
 results<-paste(wd,'results/Aging_Analysis',sep='/')
@@ -56,7 +60,7 @@ if(is.null(syn_deg_sps_dir)){
 } 
 
 ## Check for the DEG_Tables folder
-syn_deg_tbl_dir <- synapser::synFindEntityId(
+syn_deg_tbl_dir <- synFindEntityId(
   "DEG_Tables",
   syn_project
 )
@@ -326,6 +330,39 @@ used_files <- list(
   syn_deg_master,
   syn_aging_dgelists
 )
+########################### Load KEGG Pathway data ###########################
+kegg_mmu <- ROntoTools::keggPathwayGraphs(
+  organism = "mmu"
+)
+
+mmu04060_entrez <- as.numeric(
+  gsub(
+    "mmu:", "",
+    kegg_mmu[['path:mmu04060']]@nodes
+  )
+)
+
+mmu04060_genes <- AnnotationDbi::select(
+  org.Mm.eg.db::org.Mm.eg.db,
+  columns = c("SYMBOL", "GENENAME"),
+  keys=as.character(mmu04060_entrez),
+  keytype = "ENTREZID"
+)
+
+mmu04151_entrez <- as.numeric(
+  gsub(
+    "mmu:", "",
+    kegg_mmu[['path:mmu04151']]@nodes
+  )
+)
+
+mmu04151_genes <- AnnotationDbi::select(
+  org.Mm.eg.db::org.Mm.eg.db,
+  columns = c("SYMBOL", "GENENAME"),
+  keys=as.character(mmu04151_entrez),
+  keytype = "ENTREZID"
+)
+
 
 
 #####################  Setup group and contrast iterators ####################
@@ -559,6 +596,93 @@ for(c in names(contrasts)){
   )
 }
 
+########################## Plot All Genes comparison #########################
+
+## for each deg table:
+## get log fold changes and FDR values of all genes expressed
+## at biologically significant levels in at least one condition
+## and inner join DEG Tables on gene_id. Add gene symbols, and indictor column
+## to flag genes that should get a call out.
+pathways <- list(PI3K = mmu04151_genes, Cytokine = mmu04060_genes)
+for(pw in names(pathways)){
+  for(c in names(contrasts)){
+    inj <- aging.deg_master %>%
+      filter(
+        Test == "ExactTest" &
+          Partition == "Pair" &
+          Filtered == "ribo" &
+          Group_1 == contrasts[[c]][3] &
+          Group_2 == contrasts[[c]][4]
+      )
+    if(c == "LFC_P6vsWT"){
+      inj <- pax6.deg_master %>% filter(
+        Partition == "Pair",
+        Filtered == "ribo",
+        Group_1 == "WTF",
+        Group_2 == "P6F",
+        Test == "ExactTest"
+      )
+    }
+    
+    print(c)
+    df <- inner_join(
+      pax6_deg %>%
+        filter(Avg1 > 2 | Avg2 > 2) %>%
+        filter(FDR < 0.05)  %>%
+        select(gene_id, Pax6_logFC = logFC, pax6_fdr=FDR) ,
+      inj %>%
+        filter(Avg1 > 2 | Avg2 > 2) %>%
+        filter(FDR < 0.05) %>%
+        select(gene_id, Injury_logFC = logFC, inj_fdr=FDR),
+      by="gene_id"
+    ) %>% inner_join(
+      pax6.master$genes %>%
+        select(gene_id, SYMBOL),
+      by="gene_id"
+    ) %>% mutate(
+      SYMBOL = ifelse(SYMBOL %in% pathways[[pw]]$SYMBOL, SYMBOL, "")
+    ) %>% rowwise() %>%
+      mutate(
+        DIST = sqrt(sum(c(Injury_logFC^2), Pax6_logFC^2))
+      ) %>% group_by() %>%
+      mutate(
+        DIST = (DIST / max(DIST))
+      ) %>% rowwise() %>%
+      mutate(
+        ALPHA = ifelse(SYMBOL == "", max(c(DIST, 0.05)), 1)
+      ) %>%
+      group_by() %>%
+      mutate(
+        SIZE = ifelse(SYMBOL == "",1, 2),
+        COLOR = ifelse(
+          (Pax6_logFC > 0 & Injury_logFC > 0), "darkred",ifelse(
+            (Pax6_logFC < 0 & Injury_logFC < 0), "blue",
+            "black"
+          )
+        )
+      ) %>%
+      mutate(
+        COLOR = ifelse(SYMBOL == "", "black", COLOR)
+      )
+    
+    fn <- paste0(pw,"_Pax6_X_",c,"_All_Genes.tiff")
+    path <- paste(results, fn, sep="/")
+    result_files <- append(result_files, path)
+    
+    p <- ggplot(df,aes(x=Injury_logFC, y=Pax6_logFC)) +
+      geom_point(alpha = df$ALPHA, size = df$SIZE, colour = df$COLOR) +
+      geom_label_repel(aes(label=SYMBOL), max.overlaps = 1000) +
+      xlab("Log Fold Change 24 vs 0 Hours After Injury") +
+      ylab("Log Fold Change Sey vs Wildtype Lens Epithelium") +
+      theme(
+        axis.text = element_text(size=12),
+        axis.title = element_text(size=12),
+        legend.position = "none"
+      )
+    print(nrow(df))
+    ggsave(path, p, height=8, width = 8, dpi=600)
+  }
+}
 
 ######################  Push script and data to Synapse ######################
 
@@ -584,7 +708,7 @@ synSetProvenance(
   activity = Activity(
     name = "Pax6_Aging_DEG",
     description = "Genes that are both Pax6 and Injury Dependent",
-    used=used_files
+    used = used_files
   )
 )
 
