@@ -368,7 +368,7 @@ if(
   lfc_path <- read.csv(
     "data/IPG_rep54071_c70024_pathwaysTable_fdr.csv"
   )
-  lfc_path$ranking <- 1:nrow(lec_path)
+  lfc_path$ranking <- 1:nrow(lfc_path)
   
 } else if(!is.null(syn_sun_targets)){
   synGet(
@@ -378,7 +378,7 @@ if(
   lfc_path <- read.csv(
     "data/IPG_rep54071_c70024_pathwaysTable_fdr.csv"
   )
-  lfc_path$ranking <- 1:nrow(lec_path)
+  lfc_path$ranking <- 1:nrow(lfc_path)
   
 }else{
   stop("Extract data from Advaita first")
