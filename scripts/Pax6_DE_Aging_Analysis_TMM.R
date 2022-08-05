@@ -914,23 +914,24 @@ lec_path %>% inner_join(
     FDR = first(pv_fdr),
     genes = paste(SYMBOL, collapse = ", ")
   ) -> lec_pax6_injury_down
-lec_path %>%
-  inner_join(
+
+lec_path[1:10,] %>%
+  left_join(
     lec_pax6_up %>%
       select(pName, up = genes),
     by="pName"
-  ) %>%
-  inner_join(
+  ) %>% 
+  left_join(
     lec_pax6_injury_up %>%
       select(pName, up_inj = genes),
     by="pName"
   ) %>%
-  inner_join(
+  left_join(
     lec_pax6_down %>%
       select(pName, down = genes),
     by="pName"
   ) %>%
-  inner_join(
+  left_join(
     lec_pax6_injury_down %>%
       select(pName, down_inj = genes),
     by="pName"
