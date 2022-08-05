@@ -1,15 +1,17 @@
 ##############################################################################
-#
-#  File: synapse_reticulate_wrapper.R
-#  Purpose: Band-aid until SAGE fixes the synapse R client
-#  Created: 
-#
+#                                                                            #
+#  File: synapse_reticulate_wrapper.R                                        #
+#  Purpose: Band-aid until SAGE fixes the synapse R client                   #
+#  Created: June 12, 2022                                                    #
+#  Author: Adam Faranda                                                      #
+#                                                                            #
+##############################################################################
 
 library(reticulate)
 use_condaenv("synapse-env")
-sc <- import("synapseclient")
+synclient <- import("synapseclient")
 synLogin <- function(){
-  conn <- sc$login()
+  conn <- synclient$login()
   return(conn)
 }
 conn <- synLogin()
@@ -31,20 +33,17 @@ synStore <- function(entity){
 }
 
 ## Wrappers for Activity
-Activity <- function(name, description){
+Activity <- function(name, description, used=NULL, executed=NULL){
   return(
-    sc$Activity(
+    synclient$Activity(
       name = "",
-      description = ""
+      description = "",
+      used=used,
+      executed=executed
     )
   )
 }
 
-syn_act <- Activity(
-  name="upload_analysis_results",
-  description="upload analysis results"
-)
-syn_act$executed(syn_script)
 ## Wrapper for synSetProvenance
 synSetProvenance <- function(entity, activity){
   conn$setProvenance(
@@ -53,12 +52,11 @@ synSetProvenance <- function(entity, activity){
   )
 }
 
-synSetProvenance(x, syn_act)
 
-## Wrapper for File
+## Wrapper for File constructor
 File <- function(path='.', parent = NULL){
   return(
-    sc$File(
+    synclient$File(
       path = path,
       parent = parent
     )
