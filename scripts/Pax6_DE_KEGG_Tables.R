@@ -243,45 +243,13 @@ if(file.exists("data/mmu04350.xml")){
 }
 
 ######################## Load in Long Injury Table ###########################
-syn_injury_deg <- synFindEntityId(
-  "Aging_DEG_In_Pax6_LEC_Long_Table.csv",
-  parent = synFindEntityId(
-    "Pax6_Aging_Analysis",
-    parent = syn_project
-  )
-)
-
-if(
-  file.exists(
-    "results/Aging_Analysis/Aging_DEG_In_Pax6_LEC_Long_Table.csv"
-  )
-){
-  injury_deg <- read.csv(
-    "results/Aging_Analysis/Aging_DEG_In_Pax6_LEC_Long_Table.csv",
-    row.names = 1
-  )
-  
-} else if(!is.null(syn_sun_targets)){
-  synGet(
-    syn_sun_targets, downloadLocation="results/Aging_Analysis"
-  )
-  
-  injury_deg <- read.csv(
-    "results/Aging_Analysis/Aging_DEG_In_Pax6_LEC_Long_Table.csv",
-    row.names = 1
-  )
-  
-}else{
-  stop("Run Pax6_DE_Aging_Analysis_TMM.R first")
-}
 
 ## Final list of existing data files used by this script
 used_files <- list(
   syn_mmu_04151,
   syn_mmu_04350,
   syn_dgelists,
-  syn_deg_master,
-  syn_injury_deg
+  syn_deg_master
 )
 ################## Pivot DE Results and extract Node values ##################
 result_files <- c()
