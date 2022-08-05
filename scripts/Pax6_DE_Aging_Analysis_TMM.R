@@ -322,14 +322,7 @@ combined_targets <- bind_rows(
     )
 )
 
-## Final list of existing data files used by this script
-used_files <- list(
-  syn_sun_targets,
-  syn_trrust_targets,
-  syn_dgelists,
-  syn_deg_master,
-  syn_aging_dgelists
-)
+
 ########################### Load KEGG Pathway data ###########################
 
 ### List of top pathways from LEC
@@ -391,6 +384,16 @@ if(
   stop("Extract data from Advaita first")
 }
 
+## Final list of existing data files used by this script
+used_files <- list(
+  syn_sun_targets,
+  syn_trrust_targets,
+  syn_dgelists,
+  syn_deg_master,
+  syn_aging_dgelists,
+  syn_lec_path,
+  syn_lfc_path
+)
 
 ### Import KEGG Database
 
