@@ -16,11 +16,12 @@ library(tibble)
 library(dplyr)
 library(tibble)
 library(KEGGgraph)
-library(synapser)
+#library(synapser)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
 setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
+source('scripts/synapse_reticulate_wrapper.R')
 source('scripts/Overlap_Comparison_Functions.R')
 source('scripts/Wrap_edgeR_Functions.R')
 wd<-getwd()
@@ -32,7 +33,7 @@ if(!dir.exists(results)){
 data_dir <- paste0(wd,"/data")         ## Local data directory
 
 ######################### Setup Synapse Connection ###########################
-synLogin()
+#synLogin()
 syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
 syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
@@ -241,12 +242,46 @@ if(file.exists("data/mmu04350.xml")){
   stop("Download KEGG Data first")
 }
 
+######################## Load in Long Injury Table ###########################
+syn_injury_deg <- synFindEntityId(
+  "Aging_DEG_In_Pax6_LEC_Long_Table.csv",
+  parent = synFindEntityId(
+    "Pax6_Aging_Analysis",
+    parent = syn_project
+  )
+)
+
+if(
+  file.exists(
+    "results/Aging_Analysis/Aging_DEG_In_Pax6_LEC_Long_Table.csv"
+  )
+){
+  injury_deg <- read.csv(
+    "results/Aging_Analysis/Aging_DEG_In_Pax6_LEC_Long_Table.csv",
+    row.names = 1
+  )
+  
+} else if(!is.null(syn_sun_targets)){
+  synGet(
+    syn_sun_targets, downloadLocation="results/Aging_Analysis"
+  )
+  
+  injury_deg <- read.csv(
+    "results/Aging_Analysis/Aging_DEG_In_Pax6_LEC_Long_Table.csv",
+    row.names = 1
+  )
+  
+}else{
+  stop("Run Pax6_DE_Aging_Analysis_TMM.R first")
+}
+
 ## Final list of existing data files used by this script
 used_files <- list(
   syn_mmu_04151,
   syn_mmu_04350,
   syn_dgelists,
-  syn_deg_master
+  syn_deg_master,
+  syn_injury_deg
 )
 ################## Pivot DE Results and extract Node values ##################
 result_files <- c()
@@ -405,6 +440,9 @@ for(pathway in c("mmu04151", "mmu04350")){
   write.csv(kegg, file_path, row.names = F, quote = F)
   result_files <- append(result_files, file_path)
 }
+######################### Advaita Pathway Gene Lists #########################
+
+
 
 ######################  Push script and data to Synapse ######################
 
