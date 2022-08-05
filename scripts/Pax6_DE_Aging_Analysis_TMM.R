@@ -331,6 +331,39 @@ used_files <- list(
   syn_aging_dgelists
 )
 ########################### Load KEGG Pathway data ###########################
+
+### List of top pathways from LEC
+syn_lec_path <- synFindEntityId(
+  "IPG_rep54070_c70023_pathwaysTable_fdr.csv",
+  parent = syn_data_dir
+)
+
+if(
+  file.exists(
+    "data/IPG_rep54070_c70023_pathwaysTable_fdr.csv"
+  )
+){
+  lec_path <- read.csv(
+    "data/IPG_rep54070_c70023_pathwaysTable_fdr.csv"
+  )
+  
+} else if(!is.null(syn_sun_targets)){
+  synGet(
+    syn_lec_path, downloadLocation="data"
+  )
+  
+  lec_path <- read.csv(
+    "data/IPG_rep54070_c70023_pathwaysTable_fdr.csv"
+  )
+  
+}else{
+  stop("Extract data from Advaita first")
+}
+
+### List of top pathways from LFC
+
+
+### Create vectors for specific pathways
 kegg_mmu <- ROntoTools::keggPathwayGraphs(
   organism = "mmu"
 )
@@ -683,6 +716,7 @@ for(pw in names(pathways)){
     ggsave(path, p, height=8, width = 8, dpi=600)
   }
 }
+
 
 ######################  Push script and data to Synapse ######################
 
