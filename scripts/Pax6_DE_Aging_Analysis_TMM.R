@@ -361,13 +361,53 @@ if(
 }
 
 ### List of top pathways from LFC
+syn_lfc_path <- synFindEntityId(
+  "IPG_rep54071_c70024_pathwaysTable_fdr.csv",
+  parent = syn_data_dir
+)
+
+if(
+  file.exists(
+    "data/IPG_rep54071_c70024_pathwaysTable_fdr.csv"
+  )
+){
+  lfc_path <- read.csv(
+    "data/IPG_rep54071_c70024_pathwaysTable_fdr.csv"
+  )
+  
+} else if(!is.null(syn_sun_targets)){
+  synGet(
+    syn_lfc_path, downloadLocation="data"
+  )
+  
+  lfc_path <- read.csv(
+    "data/IPG_rep54071_c70024_pathwaysTable_fdr.csv"
+  )
+  
+}else{
+  stop("Extract data from Advaita first")
+}
 
 
-### Create vectors for specific pathways
+### Import KEGG Database
+
 kegg_mmu <- ROntoTools::keggPathwayGraphs(
   organism = "mmu"
 )
 
+kpn <- ROntoTools::keggPathwayNames(
+  organism = "mmu"
+)
+
+### Fix Porphyrin in KEGG names
+kpn$pName <- gsub(
+  "Porphyrin metabolism",
+  "Porphyrin and chlorophyll metabolism",
+  kpn$pName
+)
+
+
+### Create vectors for specific pathways
 mmu04060_entrez <- as.numeric(
   gsub(
     "mmu:", "",
@@ -395,6 +435,11 @@ mmu04151_genes <- AnnotationDbi::select(
   keys=as.character(mmu04151_entrez),
   keytype = "ENTREZID"
 )
+
+### Join Path ID's on Advaita tables
+lec_path <- lec_path %>% inner_join(kpn, by="pName")
+lfc_path <- lfc_path %>% inner_join(kpn, by="pName")
+
 
 
 
@@ -715,6 +760,39 @@ for(pw in names(pathways)){
     print(nrow(df))
     ggsave(path, p, height=8, width = 8, dpi=600)
   }
+}
+################## Generate Gene lists for pathway tables ####################
+
+### Join ENTREZID to DEG Tables
+pax6.deg_master %>%                    ## All Pax6 DEG
+  inner_join(
+    pax6.master$genes %>%
+      select(gene_id, ENTREZID) %>% 
+      filter(!is.na(ENTREZID)
+      )
+  ) -> pax6.deg_master
+
+
+pax6_aging_deg_table %>%               ## Pax6 Intersection with Injury
+  inner_join(
+    pax6.master$genes %>%
+      select(gene_id, ENTREZID) %>% 
+      filter(!is.na(ENTREZID)
+      )
+  ) -> pax6_aging_deg_table
+
+
+### For each pathway in the table, get the list of Pax6 DEG associated with
+### the pathway as a comma separated list
+
+for(pw in lec_path$KEGG_ID[1:10]){
+  entrez <- as.numeric(
+    gsub(
+      "mmu:", "",
+      kegg_mmu[[pw]]@nodes
+    )
+  )
+  print(entrez)
 }
 
 
