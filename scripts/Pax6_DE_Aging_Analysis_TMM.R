@@ -346,7 +346,7 @@ if(
   lec_path <- read.csv(
     "data/IPG_rep54070_c70023_pathwaysTable_fdr.csv"
   )
-  
+  lec_path$ranking <- 1:nrow(lec_path)
 } else if(!is.null(syn_sun_targets)){
   synGet(
     syn_lec_path, downloadLocation="data"
@@ -355,6 +355,7 @@ if(
   lec_path <- read.csv(
     "data/IPG_rep54070_c70023_pathwaysTable_fdr.csv"
   )
+  lec_path$ranking <- 1:nrow(lec_path)
   
 }else{
   stop("Extract data from Advaita first")
@@ -374,6 +375,7 @@ if(
   lfc_path <- read.csv(
     "data/IPG_rep54071_c70024_pathwaysTable_fdr.csv"
   )
+  lfc_path$ranking <- 1:nrow(lec_path)
   
 } else if(!is.null(syn_sun_targets)){
   synGet(
@@ -383,6 +385,7 @@ if(
   lfc_path <- read.csv(
     "data/IPG_rep54071_c70024_pathwaysTable_fdr.csv"
   )
+  lfc_path$ranking <- 1:nrow(lec_path)
   
 }else{
   stop("Extract data from Advaita first")
@@ -392,11 +395,25 @@ if(
 ### Import KEGG Database
 
 kegg_mmu <- ROntoTools::keggPathwayGraphs(
-  organism = "mmu"
+  organism = "mmu", updateCache = FALSE
 )
 
+
 kpn <- ROntoTools::keggPathwayNames(
-  organism = "mmu"
+  organism = "mmu", updateCache = FALSE
+)
+
+length(kegg_mmu)
+
+length(kpn)
+
+length(setdiff(names(kpn), names(kegg_mmu)))
+
+setdiff(names(kpn), names(kegg_mmu))[1:10]
+
+kpn <- data.frame(
+  pName = kpn,
+  KEGG_ID = names(kpn) 
 )
 
 ### Fix Porphyrin in KEGG names
@@ -767,7 +784,7 @@ for(pw in names(pathways)){
 pax6.deg_master %>%                    ## All Pax6 DEG
   inner_join(
     pax6.master$genes %>%
-      select(gene_id, ENTREZID) %>% 
+      select(gene_id, ENTREZID, SYMBOL) %>% 
       filter(!is.na(ENTREZID)
       )
   ) -> pax6.deg_master
@@ -776,7 +793,7 @@ pax6.deg_master %>%                    ## All Pax6 DEG
 pax6_aging_deg_table %>%               ## Pax6 Intersection with Injury
   inner_join(
     pax6.master$genes %>%
-      select(gene_id, ENTREZID) %>% 
+      select(gene_id, ENTREZID, SYMBOL) %>% 
       filter(!is.na(ENTREZID)
       )
   ) -> pax6_aging_deg_table
@@ -785,15 +802,163 @@ pax6_aging_deg_table %>%               ## Pax6 Intersection with Injury
 ### For each pathway in the table, get the list of Pax6 DEG associated with
 ### the pathway as a comma separated list
 
+## Get Genes for the top 10 LEC pathways
+lec_path_genes <- data.frame()
 for(pw in lec_path$KEGG_ID[1:10]){
-  entrez <- as.numeric(
-    gsub(
-      "mmu:", "",
-      kegg_mmu[[pw]]@nodes
+  lec_path_genes <- bind_rows(
+    lec_path_genes,
+    data.frame(
+      KEGG_ID = pw,
+      ENTREZID =as.numeric(
+        gsub(
+          "mmu:", "",
+          kegg_mmu[[pw]]@nodes
+        )
+      )
     )
   )
-  print(entrez)
 }
+
+lec_path %>% inner_join(
+  lec_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6.deg_master %>%
+      filter(
+        Test == "ExactTest" &
+          Filtered == "ribo" &
+          Partition == "Pair" &
+          Group_1 == "WTE" &
+          Group_2 == "P6E" &
+          (Avg1 > 2 | Avg2 > 2) &
+          abs(Avg1 - Avg2) > 2 &
+          FDR < 0.05 &
+          logFC > 1
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_up
+
+
+lec_path %>% inner_join(
+  lec_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6.deg_master %>%
+      filter(
+        Test == "ExactTest" &
+          Filtered == "ribo" &
+          Partition == "Pair" &
+          Group_1 == "WTE" &
+          Group_2 == "P6E" &
+          (Avg1 > 2 | Avg2 > 2) &
+          abs(Avg1 - Avg2) > 2 &
+          FDR < 0.05 &
+          logFC < -1
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_down
+
+lec_path %>% inner_join(
+  lec_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6_aging_deg_table %>%
+      filter(
+        IS_PAX6 &
+          IS_INJURY &
+          UP_INJURY &
+          UP_PAX6 &
+          Contrast == "Young_Injury"
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_injury_up
+
+lec_path %>% inner_join(
+  lec_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6_aging_deg_table %>%
+      filter(
+        IS_PAX6 &
+          IS_INJURY &
+          !UP_INJURY &
+          !UP_PAX6 &
+          Contrast == "Young_Injury"
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_injury_down
+lec_path %>%
+  inner_join(
+    lec_pax6_up %>%
+      select(pName, up = genes),
+    by="pName"
+  ) %>%
+  inner_join(
+    lec_pax6_injury_up %>%
+      select(pName, up_inj = genes),
+    by="pName"
+  ) %>%
+  inner_join(
+    lec_pax6_down %>%
+      select(pName, down = genes),
+    by="pName"
+  ) %>%
+  inner_join(
+    lec_pax6_injury_down %>%
+      select(pName, down_inj = genes),
+    by="pName"
+  ) -> lec_path_final
+
+fn <- "Advaita_Top_10_Pathways_LEC.csv"
+path <- paste(results, fn, sep="/")
+write.csv(lec_path_final, path)
+result_files <- append(result_files, path)
+
+
+
+    
+## Get Genes for the top 10 LFC pathways BROKEN UNTIL FURTHER NOTICE
+# lfc_path_genes <- data.frame()
+# for(pw in lfc_path$KEGG_ID[1:10]){
+#   lfc_path_genes <- bind_rows(
+#     lfc_path_genes,
+#     data.frame(
+#       KEGG_ID = pw,
+#       ENTREZID = as.numeric(
+#         gsub(
+#           "mmu:", "",
+#           kegg_mmu[[pw]]@nodes
+#         )
+#       )
+#     )
+#   )
+# }
+
+
 
 
 ######################  Push script and data to Synapse ######################
