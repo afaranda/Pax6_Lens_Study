@@ -971,8 +971,8 @@ lfc_path %>% inner_join(
         Test == "ExactTest" &
           Filtered == "ribo" &
           Partition == "Pair" &
-          Group_1 == "WTE" &
-          Group_2 == "P6E" &
+          Group_1 == "WTF" &
+          Group_2 == "P6F" &
           (Avg1 > 2 | Avg2 > 2) &
           abs(Avg1 - Avg2) > 2 &
           FDR < 0.05 &
@@ -997,8 +997,8 @@ lfc_path %>% inner_join(
         Test == "ExactTest" &
           Filtered == "ribo" &
           Partition == "Pair" &
-          Group_1 == "WTE" &
-          Group_2 == "P6E" &
+          Group_1 == "WTF" &
+          Group_2 == "P6F" &
           (Avg1 > 2 | Avg2 > 2) &
           abs(Avg1 - Avg2) > 2 &
           FDR < 0.05 &
