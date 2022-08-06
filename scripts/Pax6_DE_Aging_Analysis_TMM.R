@@ -457,60 +457,6 @@ mmu04151_genes <- AnnotationDbi::select(
 )
 
 
-## Load missing data needed for LFC tables
-syn_mmu_03010 <- synFindEntityId(
-  "mmu03010.xml", parent = syn_data_dir
-)
-
-if(file.exists("data/mmu03010.xml")){
-  mmu03010 <- parseKGML2DataFrame(
-    "data/mmu03010.xml"
-  )
-} else if(!is.null(syn_mmu_03010)){
-  synGet(
-    syn_mmu_03010, downloadLocation="data"
-  )
-  
-  mmu03010 <- parseKGML2DataFrame(
-    "data/mmu03010.xml"
-  )
-  
-}else{
-  stop("Download KEGG Data first")
-}
-
-syn_mmu_01230 <- synFindEntityId(
-  "mmu01230.xml", parent = syn_data_dir
-)
-
-if(file.exists("data/mmu01230.xml")){
-  mmu01230 <- parseKGML2DataFrame(
-    "data/mmu01230.xml"
-  )
-} else if(!is.null(syn_mmu_01230)){
-  synGet(
-    syn_mmu_01230, downloadLocation="data"
-  )
-  
-  mmu01230 <- parseKGML2DataFrame(
-    "data/mmu01230.xml"
-  )
-  
-}else{
-  stop("Download KEGG Data first")
-}
-
-
-# mmu01230_entrez <- as.numeric(
-#   gsub(
-#     "mmu:",
-#     unique(
-#       c(mmu01230$f
-#   )
-# )
-
-
-
 ### Join Path ID's on Advaita tables
 lec_path <- lec_path %>% inner_join(kpn, by="pName")
 lfc_path <- lfc_path %>% inner_join(kpn, by="pName")
