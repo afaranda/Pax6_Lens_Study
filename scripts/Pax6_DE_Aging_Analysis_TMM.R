@@ -1076,7 +1076,7 @@ lfc_path[1:10,] %>%
     by="pName"
   ) -> lfc_path_final
 
-fn <- "Advaita_Top_10_Pathways_LEC.csv"
+fn <- "Advaita_Top_10_Pathways_LFC.csv"
 path <- paste(results, fn, sep="/")
 write.csv(lfc_path_final, path)
 result_files <- append(result_files, path)
