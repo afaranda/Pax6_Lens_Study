@@ -398,9 +398,9 @@ used_files <- list(
 ### Import KEGG Database
 
 kegg_mmu <- ROntoTools::keggPathwayGraphs(
-  organism = "mmu", updateCache = FALSE
+  organism = "mmu", updateCache = FALSE,
+  nodeOnlyGraphs = TRUE
 )
-
 
 kpn <- ROntoTools::keggPathwayNames(
   organism = "mmu", updateCache = FALSE
@@ -455,6 +455,61 @@ mmu04151_genes <- AnnotationDbi::select(
   keys=as.character(mmu04151_entrez),
   keytype = "ENTREZID"
 )
+
+
+## Load missing data needed for LFC tables
+syn_mmu_03010 <- synFindEntityId(
+  "mmu03010.xml", parent = syn_data_dir
+)
+
+if(file.exists("data/mmu03010.xml")){
+  mmu03010 <- parseKGML2DataFrame(
+    "data/mmu03010.xml"
+  )
+} else if(!is.null(syn_mmu_03010)){
+  synGet(
+    syn_mmu_03010, downloadLocation="data"
+  )
+  
+  mmu03010 <- parseKGML2DataFrame(
+    "data/mmu03010.xml"
+  )
+  
+}else{
+  stop("Download KEGG Data first")
+}
+
+syn_mmu_01230 <- synFindEntityId(
+  "mmu01230.xml", parent = syn_data_dir
+)
+
+if(file.exists("data/mmu01230.xml")){
+  mmu01230 <- parseKGML2DataFrame(
+    "data/mmu01230.xml"
+  )
+} else if(!is.null(syn_mmu_01230)){
+  synGet(
+    syn_mmu_01230, downloadLocation="data"
+  )
+  
+  mmu01230 <- parseKGML2DataFrame(
+    "data/mmu01230.xml"
+  )
+  
+}else{
+  stop("Download KEGG Data first")
+}
+
+
+# mmu01230_entrez <- as.numeric(
+#   gsub(
+#     "mmu:",
+#     unique(
+#       c(mmu01230$f
+#   )
+# )
+
+
 
 ### Join Path ID's on Advaita tables
 lec_path <- lec_path %>% inner_join(kpn, by="pName")
@@ -942,25 +997,143 @@ path <- paste(results, fn, sep="/")
 write.csv(lec_path_final, path)
 result_files <- append(result_files, path)
 
+## Get Genes for the top 10 LFC pathways
+lfc_path_genes <- data.frame()
+for(pw in lfc_path$KEGG_ID[1:10]){
+  lfc_path_genes <- bind_rows(
+    lfc_path_genes,
+    data.frame(
+      KEGG_ID = pw,
+      ENTREZID =as.numeric(
+        gsub(
+          "mmu:", "",
+          kegg_mmu[[pw]]@nodes
+        )
+      )
+    )
+  )
+}
 
 
-    
-## Get Genes for the top 10 LFC pathways BROKEN UNTIL FURTHER NOTICE
-# lfc_path_genes <- data.frame()
-# for(pw in lfc_path$KEGG_ID[1:10]){
-#   lfc_path_genes <- bind_rows(
-#     lfc_path_genes,
-#     data.frame(
-#       KEGG_ID = pw,
-#       ENTREZID = as.numeric(
-#         gsub(
-#           "mmu:", "",
-#           kegg_mmu[[pw]]@nodes
-#         )
-#       )
-#     )
-#   )
-# }
+lfc_path %>% inner_join(
+  lfc_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6.deg_master %>%
+      filter(
+        Test == "ExactTest" &
+          Filtered == "ribo" &
+          Partition == "Pair" &
+          Group_1 == "WTE" &
+          Group_2 == "P6E" &
+          (Avg1 > 2 | Avg2 > 2) &
+          abs(Avg1 - Avg2) > 2 &
+          FDR < 0.05 &
+          logFC > 1
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_up
+
+
+lfc_path %>% inner_join(
+  lfc_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6.deg_master %>%
+      filter(
+        Test == "ExactTest" &
+          Filtered == "ribo" &
+          Partition == "Pair" &
+          Group_1 == "WTE" &
+          Group_2 == "P6E" &
+          (Avg1 > 2 | Avg2 > 2) &
+          abs(Avg1 - Avg2) > 2 &
+          FDR < 0.05 &
+          logFC < -1
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_down
+
+lfc_path %>% inner_join(
+  lfc_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6_aging_deg_table %>%
+      filter(
+        IS_PAX6 &
+          IS_INJURY &
+          UP_INJURY &
+          UP_PAX6 &
+          Contrast == "Young_Injury"
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_injury_up
+
+lfc_path %>% inner_join(
+  lfc_path_genes,
+  by="KEGG_ID"
+) %>% 
+  inner_join(
+    pax6_aging_deg_table %>%
+      filter(
+        IS_PAX6 &
+          IS_INJURY &
+          !UP_INJURY &
+          !UP_PAX6 &
+          Contrast == "Young_Injury"
+      ), 
+    by="ENTREZID"
+  ) %>% group_by(pName) %>%
+  summarize(
+    Total=n(), 
+    FDR = first(pv_fdr),
+    genes = paste(SYMBOL, collapse = ", ")
+  ) -> lec_pax6_injury_down
+
+lfc_path[1:10,] %>%
+  left_join(
+    lec_pax6_up %>%
+      select(pName, up = genes),
+    by="pName"
+  ) %>% 
+  left_join(
+    lec_pax6_injury_up %>%
+      select(pName, up_inj = genes),
+    by="pName"
+  ) %>%
+  left_join(
+    lec_pax6_down %>%
+      select(pName, down = genes),
+    by="pName"
+  ) %>%
+  left_join(
+    lec_pax6_injury_down %>%
+      select(pName, down_inj = genes),
+    by="pName"
+  ) -> lfc_path_final
+
+fn <- "Advaita_Top_10_Pathways_LEC.csv"
+path <- paste(results, fn, sep="/")
+write.csv(lfc_path_final, path)
+result_files <- append(result_files, path)
 
 
 
