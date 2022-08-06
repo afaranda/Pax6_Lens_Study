@@ -984,7 +984,7 @@ lfc_path %>% inner_join(
     Total=n(), 
     FDR = first(pv_fdr),
     genes = paste(SYMBOL, collapse = ", ")
-  ) -> lec_pax6_up
+  ) -> lfc_pax6_up
 
 
 lfc_path %>% inner_join(
@@ -1010,7 +1010,7 @@ lfc_path %>% inner_join(
     Total=n(), 
     FDR = first(pv_fdr),
     genes = paste(SYMBOL, collapse = ", ")
-  ) -> lec_pax6_down
+  ) -> lfc_pax6_down
 
 lfc_path %>% inner_join(
   lfc_path_genes,
@@ -1031,7 +1031,7 @@ lfc_path %>% inner_join(
     Total=n(), 
     FDR = first(pv_fdr),
     genes = paste(SYMBOL, collapse = ", ")
-  ) -> lec_pax6_injury_up
+  ) -> lfc_pax6_injury_up
 
 lfc_path %>% inner_join(
   lfc_path_genes,
@@ -1052,26 +1052,26 @@ lfc_path %>% inner_join(
     Total=n(), 
     FDR = first(pv_fdr),
     genes = paste(SYMBOL, collapse = ", ")
-  ) -> lec_pax6_injury_down
+  ) -> lfc_pax6_injury_down
 
 lfc_path[1:10,] %>%
   left_join(
-    lec_pax6_up %>%
+    lfc_pax6_up %>%
       select(pName, up = genes),
     by="pName"
   ) %>% 
   left_join(
-    lec_pax6_injury_up %>%
+    lfc_pax6_injury_up %>%
       select(pName, up_inj = genes),
     by="pName"
   ) %>%
   left_join(
-    lec_pax6_down %>%
+    lfc_pax6_down %>%
       select(pName, down = genes),
     by="pName"
   ) %>%
   left_join(
-    lec_pax6_injury_down %>%
+    lfc_pax6_injury_down %>%
       select(pName, down_inj = genes),
     by="pName"
   ) -> lfc_path_final
