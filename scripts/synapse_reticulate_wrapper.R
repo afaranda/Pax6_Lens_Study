@@ -63,3 +63,12 @@ File <- function(path='.', parent = NULL){
   )
 }
 
+## Wrapper for Folder constructor
+Folder <- function(name='new', parent = NULL){
+  return(
+    synclient$Folder(
+      name = name,
+      parent = parent
+    )
+  )
+}
