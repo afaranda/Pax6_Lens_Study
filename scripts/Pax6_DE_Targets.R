@@ -247,6 +247,23 @@ if(file.exists("data/Forebrain_Peak_Annotations.tsv")){
   stop("Get Sun Forebrain Peaks First")
 }
 
+### Update Col4a3bp to Cert1 in sSun Peaks
+sun_lens_peaks$mm9_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_lens_peaks$mm9_Symbol
+)
+
+sun_lens_peaks$mm10_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_lens_peaks$mm10_Symbol
+)
+
+sun_forebrain_peaks$mm9_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_forebrain_peaks$mm9_Symbol
+)
+
+sun_forebrain_peaks$mm10_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_forebrain_peaks$mm10_Symbol
+)
+
 
 ### For Combined Targets, Use the observation from Sun 2015 
 combined_targets <- bind_rows(
