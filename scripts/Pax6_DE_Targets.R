@@ -13,11 +13,12 @@ library(tidyr)
 library(tibble)
 library(dplyr)
 library(tibble)
-library(synapser)
+#library(synapser)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
-setwd('/Users/adam/Documents/11Sep2021_Pax6_Study_DEG_Analysis/')
+setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
+source('scripts/synapse_reticulate_wrapper.R')
 source('scripts/Overlap_Comparison_Functions.R')
 source('scripts/Wrap_edgeR_Functions.R')
 wd<-getwd()
@@ -29,7 +30,7 @@ if(!dir.exists(results)){
 data_dir <- paste0(wd,"/data")         ## Local data directory
 
 ######################### Setup Synapse Connection ###########################
-synLogin()
+#synLogin()
 syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
 syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
@@ -46,7 +47,7 @@ if(is.null(syn_deg_sps_dir)){
 } 
 
 ## Check for the DEG_Tables folder
-syn_deg_tbl_dir <- synapser::synFindEntityId(
+syn_deg_tbl_dir <- synFindEntityId(
   "DEG_Tables",
   syn_project
 )
@@ -171,6 +172,7 @@ if(file.exists("data/Sun2015_Pax6_DE_Tagrets.tsv")){
   stop("Prepare TRRUST Targets file First")
 }
 
+### Genes considered PAX6 targets in Human by MSigDB
 syn_msig_targets <- synFindEntityId(
   "PAX6_TARGET_GENES_MSigDB_GeneSet.txt",
   parent = syn_data_dir
@@ -193,6 +195,56 @@ if(file.exists("data/PAX6_TARGET_GENES_MSigDB_GeneSet.txt")){
   
 }else{
   stop("Prepare MSigDB Targets file First")
+}
+
+## Peak Annotations for lens from Sun et al. 2015
+syn_sun_lens_peaks <- synFindEntityId(
+  "Lens_Peak_Annotations.tsv", 
+  parent = syn_data_dir
+)
+
+if(file.exists("data/Lens_Peak_Annotations.tsv")){
+  sun_lens_peaks <- read.table(
+    "data/Lens_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+} else if(!is.null(syn_msig_targets)){
+  synGet(
+    syn_sun_lens_peaks, downloadLocation="data"
+  )
+  
+  sun_lens_peaks <- read.table(
+    "data/Lens_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+  
+}else{
+  stop("Get Sun Lens Peaks First")
+}
+
+## Forebrain Peak Annotations for lens from Sun et al. 2015
+syn_sun_forebrain_peaks <- synFindEntityId(
+  "Forebrain_Peak_Annotations.tsv", 
+  parent = syn_data_dir
+)
+
+if(file.exists("data/Forebrain_Peak_Annotations.tsv")){
+  sun_forebrain_peaks <- read.table(
+    "data/Forebrain_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+} else if(!is.null(syn_msig_targets)){
+  synGet(
+    syn_sun_forebrain_peaks, downloadLocation="data"
+  )
+  
+  sun_forebrain_peaks <- read.table(
+    "data/Forebrain_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+  
+}else{
+  stop("Get Sun Forebrain Peaks First")
 }
 
 
@@ -407,6 +459,7 @@ for(c in names(contrasts)){
       IS_PAX6 = (SYMBOL %in% sun_targets$Target),
       IS_DEG = IS_DEG & logFC > 1
     ) %>%
+    
     select( IS_DEG, IS_PAX6) %>% table()
   
   print(contingency)
