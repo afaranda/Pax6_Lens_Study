@@ -297,17 +297,17 @@ contrasts=list(
   WT_Fibers_vs_Epi=c('WTE', 'WTF'),
   P6_Fibers_vs_Epi=c('P6E', 'P6F'),
   Epi_P6_vs_WT=c('WTE', 'P6E'),
-  Fibers_P6_vs_WT=c('WTF', 'P6F'),
-  `2Way_Fib_vs_Epi`=c("Epi", "Fib"),
-  `2Way_P6_vs_WT`=c("WT", "P6"),
-  `2Way_Interaction`=c("REF", "INX"),
-  DegNorm_WT_Fibers_vs_Epi=c('WTE', 'WTF'),
-  DegNorm_P6_Fibers_vs_Epi=c('P6E', 'P6F'),
-  DegNorm_Epi_P6_vs_WT=c('WTE', 'P6E'),
-  DegNorm_Fibers_P6_vs_WT=c('WTF', 'P6F'),
-  DegNorm_2Way_Fib_vs_Epi=c("Epi", "Fib"),
-  DegNorm_2Way_P6_vs_WT=c("WT", "P6"),
-  DegNorm_2Way_Interaction=c("REF", "INX")
+  Fibers_P6_vs_WT=c('WTF', 'P6F')#,
+  # `2Way_Fib_vs_Epi`=c("Epi", "Fib"),
+  # `2Way_P6_vs_WT`=c("WT", "P6"),
+  # `2Way_Interaction`=c("REF", "INX")#,
+  # DegNorm_WT_Fibers_vs_Epi=c('WTE', 'WTF'),
+  # DegNorm_P6_Fibers_vs_Epi=c('P6E', 'P6F'),
+  # DegNorm_Epi_P6_vs_WT=c('WTE', 'P6E'),
+  # DegNorm_Fibers_P6_vs_WT=c('WTF', 'P6F'),
+  # DegNorm_2Way_Fib_vs_Epi=c("Epi", "Fib"),
+  # DegNorm_2Way_P6_vs_WT=c("WT", "P6"),
+  # DegNorm_2Way_Interaction=c("REF", "INX")
 )
 
 # Define A list of named contrasts; each element points to a string which
@@ -316,17 +316,17 @@ contrast_descriptions<-list(
   WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
   P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
   Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
-  Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
-  `2Way_Fib_vs_Epi`="2 Way interaction model lens fiber cells vs lens fiber cells",
-  `2Way_P6_vs_WT`="2 Way interaction model Sey vs Wildtype",
-  `2Way_Interaction`="2 Way interaction model haploinsufficiency and differentiation",
-  DegNorm_WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
-  DegNorm_P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
-  DegNorm_Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
-  DegNorm_Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
-  DegNorm_2Way_Fib_vs_Epi="2 Way interaction model lens fiber cells vs lens fiber cells",
-  DegNorm_2Way_P6_vs_WT="2 Way interaction model Sey vs Wildtype",
-  DegNorm_2Way_Interaction="2 Way interaction model haploinsufficiency and differentiation"
+  Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells"#,
+  # `2Way_Fib_vs_Epi`="2 Way interaction model lens fiber cells vs lens fiber cells",
+  # `2Way_P6_vs_WT`="2 Way interaction model Sey vs Wildtype",
+  # `2Way_Interaction`="2 Way interaction model haploinsufficiency and differentiation",
+  # DegNorm_WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
+  # DegNorm_P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
+  # DegNorm_Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
+  # DegNorm_Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
+  # DegNorm_2Way_Fib_vs_Epi="2 Way interaction model lens fiber cells vs lens fiber cells",
+  # DegNorm_2Way_P6_vs_WT="2 Way interaction model Sey vs Wildtype",
+  # DegNorm_2Way_Interaction="2 Way interaction model haploinsufficiency and differentiation"
 )
 
 ####### Iterate over contrasts and extract DE Results for Pax6 Targets #######
