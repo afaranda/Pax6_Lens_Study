@@ -265,6 +265,63 @@ sun_forebrain_peaks$mm10_Symbol <- gsub(
 )
 
 
+
+
+
+
+### Many of the symbols missing in the mm10 column were lost during
+### Mapping.  In most cases this is because the RefSeq ID has been
+### deprecated, either due to new data about the locus or because
+### the specific transcript could not be validated (eg Auts2).  
+### In this analysis, the transcript is irrelevant thus we will
+### replace missing mm10 symbols with their mm9 counterparts.
+sun_lens_peaks <- sun_lens_peaks %>%
+  rowwise() %>%
+  mutate(
+    mm10_Symbol = ifelse(mm10_Symbol == "", mm9_Symbol, mm10_Symbol)
+  ) %>% group_by() %>%
+  filter(!grepl("\\|", mm10_Symbol))
+
+sun_forebrain_peaks <- sun_forebrain_peaks %>%
+  rowwise() %>%
+  mutate(
+    mm10_Symbol = ifelse(mm10_Symbol == "", mm9_Symbol, mm10_Symbol)
+  ) %>% group_by() %>%
+  filter(!grepl("\\|", mm10_Symbol))
+
+
+
+
+
+### Collapse to genes and count peaks of each category
+sun_lens_peaks %>%
+  group_by(mm10_Symbol, Peak) %>%
+  filter(row_number() == 1) %>%
+  group_by(mm10_Symbol) %>%
+  summarise(
+    Adjacent_Peaks = n(),
+    Promoter_Peaks = sum(grepl("prot", Type)),
+    Exon_Peaks = sum(grepl("exon", Type)),
+    Intron_Peaks = sum(grepl("intron", Type)),
+    Distal_Peaks = sum(grepl("distal", Type))
+  ) %>% group_by() %>%
+  rename(Target = mm10_Symbol) %>% 
+  as.data.frame() -> sun_lens_peaks
+
+sun_forebrain_peaks %>%
+  group_by(mm10_Symbol, Peak) %>%
+  filter(row_number() == 1) %>%
+  group_by(mm10_Symbol) %>%
+  summarise(
+    Adjacent_Peaks = n(),
+    Promoter_Peaks = sum(grepl("prot", Type)),
+    Exon_Peaks = sum(grepl("exon", Type)),
+    Intron_Peaks = sum(grepl("intron", Type)),
+    Distal_Peaks = sum(grepl("distal", Type))
+  ) %>% group_by() %>%
+  rename(Target = mm10_Symbol) %>% 
+  as.data.frame() -> sun_forebrain_peaks
+
 ### For Combined Targets, Use the observation from Sun 2015 
 combined_targets <- bind_rows(
   sun_targets %>%
@@ -436,6 +493,218 @@ for(c in names(contrasts)){
   
   print(c)
   
+  #### Tabulate Pax6 Peaks reported For Lens in Sun et. al 2015
+  deg_sun_lens_peaks <- inner_join(
+    sun_lens_peaks,
+    degSet,
+    by=c("Target"="SYMBOL")
+  ) %>%
+    filter(abs(logFC) > 1 & FDR < 0.05)
+  
+  ## Get file name for the table
+  fn<-paste0("P6T_",c,"_Sun_2015_Lens_Peaks.csv")
+  path<-paste(results, fn, sep="/")
+  write.csv(deg_sun_lens_peaks, file=path, row.names = F)
+  result_files <- append(result_files, path)
+  
+  ## Run Enrichment tests on Sun_2015 Targets
+  fn<-paste0("P6T_",c,"_Sun_2015_Lens_Peak_Enrichment.txt")
+  path<-paste(results, fn, sep="/")
+  result_files <- append(result_files, path)
+  
+  sink(path)
+  print("Statistically Significant")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_lens_peaks$Target)
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+   contingency, alternative = "two.sided"
+  ) %>% print()
+  
+  print("Statistically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_lens_peaks$Target),
+      IS_DEG = IS_DEG & logFC > 1
+    ) %>%
+    
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  print("Statistically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_lens_peaks$Target),
+      IS_DEG = IS_DEG & logFC < -1
+    ) %>%
+    select(IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  
+  print("Biologically Significant")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_lens_peaks$Target)
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency, alternative = "two.sided"
+  ) %>% print()
+  
+  print("Biologically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_lens_peaks$Target),
+      IS_BIO = IS_BIO & logFC > 1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  print("Biologically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_lens_peaks$Target),
+      IS_BIO = IS_BIO & logFC < -1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  sink()
+  
+  #### Tabulate Pax6 Peaks reported For Forebrain in Sun et. al 2015
+  deg_sun_forebrain_peaks <- inner_join(
+    sun_forebrain_peaks,
+    degSet,
+    by=c("Target"="SYMBOL")
+  ) %>%
+    filter(abs(logFC) > 1 & FDR < 0.05)
+  
+  ## Get file name for the table
+  fn<-paste0("P6T_",c,"_Sun_2015_Forebrain_Peaks.csv")
+  path<-paste(results, fn, sep="/")
+  write.csv(deg_sun_forebrain_peaks, file=path, row.names = F)
+  result_files <- append(result_files, path)
+  
+  ## Run Enrichment tests on Sun_2015 Targets
+  fn<-paste0("P6T_",c,"_Sun_2015_Forebrain_Peak_Enrichment.txt")
+  path<-paste(results, fn, sep="/")
+  result_files <- append(result_files, path)
+  
+  sink(path)
+  print("Statistically Significant")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_forebrain_peaks$Target)
+    ) %>%
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency, alternative = "two.sided"
+  ) %>% print()
+  
+  print("Statistically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_forebrain_peaks$Target),
+      IS_DEG = IS_DEG & logFC > 1
+    ) %>%
+    
+    select( IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  print("Statistically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_forebrain_peaks$Target),
+      IS_DEG = IS_DEG & logFC < -1
+    ) %>%
+    select(IS_DEG, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  
+  print("Biologically Significant")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_forebrain_peaks$Target)
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency, alternative = "two.sided"
+  ) %>% print()
+  
+  print("Biologically Positive")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_forebrain_peaks$Target),
+      IS_BIO = IS_BIO & logFC > 1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  print("Biologically Negative")
+  print(c)
+  contingency <- degSet %>%
+    mutate(
+      IS_PAX6 = (SYMBOL %in% sun_forebrain_peaks$Target),
+      IS_BIO = IS_BIO & logFC < -1
+    ) %>%
+    select( IS_BIO, IS_PAX6) %>% table()
+  
+  print(contingency)
+  fisher.test(
+    contingency,alternative = "two.sided"
+  ) %>% print()
+  
+  sink()
+  
   #### Tabulate Targets reported in Sun et. al 2015
   deg_sun_targets <- inner_join(
     sun_targets,
@@ -466,7 +735,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-   contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Statistically Positive")
@@ -481,7 +750,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Statistically Negative")
@@ -495,7 +764,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   
@@ -509,7 +778,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Positive")
@@ -523,7 +792,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Negative")
@@ -537,7 +806,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   sink()
@@ -572,7 +841,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Statistically Positive")
@@ -586,7 +855,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Statistically Negative")
@@ -600,7 +869,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Significant")
@@ -613,7 +882,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Positive")
@@ -627,7 +896,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Negative")
@@ -641,7 +910,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   sink()
   
@@ -676,7 +945,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Statistically Positive")
@@ -690,7 +959,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Statistically Negative")
@@ -704,7 +973,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Significant")
@@ -717,7 +986,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Positive")
@@ -731,7 +1000,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   print("Biologically Negative")
@@ -745,7 +1014,7 @@ for(c in names(contrasts)){
   
   print(contingency)
   fisher.test(
-    contingency,alternative = "greater"
+    contingency,alternative = "two.sided"
   ) %>% print()
   
   sink()
