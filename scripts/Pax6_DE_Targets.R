@@ -357,7 +357,9 @@ used_files <- list(
   syn_sun_targets,
   syn_trrust_targets,
   syn_dgelists,
-  syn_deg_master
+  syn_deg_master,
+  syn_sun_lens_peaks,
+  syn_sun_forebrain_peaks
 )
 
 
