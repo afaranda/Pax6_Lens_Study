@@ -744,7 +744,7 @@ combined_targets %>%
         Partition == "Pair"
       ) %>%
       inner_join(
-        master$genes %>%
+        pax6.master$genes %>%
           select(gene_id, SYMBOL, DESCRIPTION),
         by="gene_id"
       ) %>%
@@ -763,7 +763,7 @@ combined_targets %>%
         Partition == "Pair"
       ) %>%
       inner_join(
-        master$genes %>%
+        pax6.master$genes %>%
           select(gene_id, SYMBOL),
         by="gene_id"
       ) %>%
