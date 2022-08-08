@@ -10,8 +10,9 @@
 # Load libraries, set working directory
 library(edgeR)
 library(dplyr)
-library(synapser)
+#library(synapser)
 setwd("~/Documents/23Feb2022_Pax6_Study_DEG_Analysis/")
+source("scripts/synapse_reticulate_wrapper.R")
 wd<-getwd()
 data_dir="data"
 
@@ -45,6 +46,277 @@ syn_dgelists <- synFindEntityId(
   "pax6_master_dgelists.Rdata",
   parent=syn_data_dir
 )
+syn_hpco_gene_meta <- synFindEntityId(
+  "Gene_Metadata",
+  synFindEntityId("Human_PCO_Study_Data_Set_1")
+)
+
+
+##############################################################################
+#                   Import metadata to annotate genes table                  #
+##############################################################################
+
+
+############################# Load iSyTE Data ################################
+
+syn_isyte <- synFindEntityId(
+  "isyte528_long_table.csv",
+  parent=syn_data_dir
+)
+
+if(file.exists('data/isyte528_long_table.csv')){
+  isyte528 <- read.csv('data/isyte528_long_table.csv', row.names = 1)
+} else if(!is.null(syn_isyte)){
+  synGet(
+    syn_isyte, downloadLocation=data_dir
+  )
+  isyte528 <- read.csv('data/isyte528_long_table.csv', row.names = 1)
+}else{
+  stop("Run Prepare_Expression_DGELists.R first")
+}
+
+
+############################# Load Zonule Data ###############################
+
+syn_zonules <- synFindEntityId(
+  "Zonule_Proteins_Mapped_Ensembl_ID.txt",
+  parent=syn_hpco_gene_meta
+)
+
+syn_homology <- synFindEntityId(
+  "human_mouse_homology_groups.csv",
+  parent=syn_hpco_gene_meta
+)
+
+if(file.exists('data/Zonule_Proteins_Mapped_Ensembl_ID.txt')){
+  zonules <- read.table(
+    'data/Zonule_Proteins_Mapped_Ensembl_ID.txt',
+    header=T, quote="", sep="\t"
+  ) %>%
+    distinct(
+      Gene.stable.ID, Gene.name
+    )
+} else if(!is.null(syn_zonules)){
+  synGet(
+    syn_zonules, downloadLocation=data_dir
+  )
+  zonules <- read.table(
+    'data/Zonule_Proteins_Mapped_Ensembl_ID.txt',
+    header=T, quote="", sep="\t"
+  ) %>%
+    distinct(
+      Gene.stable.ID, Gene.name
+    )
+}else{
+  stop("Run Prepare_Expression_DGELists.R first")
+}
+
+syn_homology <- synFindEntityId(
+  "human_mouse_homology_groups.csv",
+  parent=syn_hpco_gene_meta
+)
+
+if(file.exists('data/human_mouse_homology_groups.csv')){
+  homology <- read.csv(
+    'data/human_mouse_homology_groups.csv', row.names = 1
+  ) 
+} else if(!is.null(syn_homology)){
+  synGet(
+    syn_homology, downloadLocation=data_dir
+  )
+  homology <- read.csv(
+    'data/human_mouse_homology_groups.csv', row.names = 1
+  ) 
+}else{
+  stop("Run Prepare_Expression_DGELists.R first")
+}
+
+zonules <- inner_join(
+  zonules,
+  homology,
+  by="Gene.stable.ID"
+)
+
+########################## Load in Pax6 Targets ##############################
+syn_trrust_targets <- synFindEntityId(
+  "TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
+  parent = syn_data_dir
+)
+
+if(file.exists("data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv")){
+  trrust_targets <- read.table(
+    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
+  )
+  names(trrust_targets) <- c(
+    "TFactor", "Target", "Direction","PMID"
+  )
+  
+} else if(!is.null(syn_trrust_targets)){
+  synGet(
+    syn_trrust_targets, downloadLocation="data"
+  )
+  
+  trrust_targets <- read.table(
+    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
+  )
+  names(trrust_targets) <- c(
+    "TFactor", "Target", "Direction","PMID"
+  )
+  
+}else{
+  stop("Prepare TRRUST Targets file First")
+}
+
+syn_sun_targets <- synFindEntityId(
+  "Sun2015_Pax6_DE_Tagrets.tsv",
+  parent = syn_data_dir
+)
+
+if(file.exists("data/Sun2015_Pax6_DE_Tagrets.tsv")){
+  sun_targets <- read.table(
+    "data/Sun2015_Pax6_DE_Tagrets.tsv",
+    header=T
+  )
+  
+} else if(!is.null(syn_sun_targets)){
+  synGet(
+    syn_sun_targets, downloadLocation="data"
+  )
+  
+  sun_targets <- read.table(
+    "data/Sun2015_Pax6_DE_Tagrets.tsv",
+    header=T
+  )
+  
+}else{
+  stop("Prepare TRRUST Targets file First")
+}
+
+######################### Prepare Pax6 Peak data ##############################
+
+syn_sun_lens_peaks <- synFindEntityId(
+  "Lens_Peak_Annotations.tsv", 
+  parent = syn_data_dir
+)
+
+if(file.exists("data/Lens_Peak_Annotations.tsv")){
+  sun_lens_peaks <- read.table(
+    "data/Lens_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+} else if(!is.null(syn_msig_targets)){
+  synGet(
+    syn_sun_lens_peaks, downloadLocation="data"
+  )
+  
+  sun_lens_peaks <- read.table(
+    "data/Lens_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+  
+}else{
+  stop("Get Sun Lens Peaks First")
+}
+
+## Forebrain Peak Annotations for lens from Sun et al. 2015
+syn_sun_forebrain_peaks <- synFindEntityId(
+  "Forebrain_Peak_Annotations.tsv", 
+  parent = syn_data_dir
+)
+
+if(file.exists("data/Forebrain_Peak_Annotations.tsv")){
+  sun_forebrain_peaks <- read.table(
+    "data/Forebrain_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+} else if(!is.null(syn_msig_targets)){
+  synGet(
+    syn_sun_forebrain_peaks, downloadLocation="data"
+  )
+  
+  sun_forebrain_peaks <- read.table(
+    "data/Forebrain_Peak_Annotations.tsv",
+    header=T, sep="\t"
+  )
+  
+}else{
+  stop("Get Sun Forebrain Peaks First")
+}
+
+### Update Col4a3bp to Cert1 in sSun Peaks
+sun_lens_peaks$mm9_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_lens_peaks$mm9_Symbol
+)
+
+sun_lens_peaks$mm10_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_lens_peaks$mm10_Symbol
+)
+
+sun_forebrain_peaks$mm9_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_forebrain_peaks$mm9_Symbol
+)
+
+sun_forebrain_peaks$mm10_Symbol <- gsub(
+  "Col4a3bp", "Cert1", sun_forebrain_peaks$mm10_Symbol
+)
+
+
+
+
+
+
+### Many of the symbols missing in the mm10 column were lost during
+### Mapping.  In most cases this is because the RefSeq ID has been
+### deprecated, either due to new data about the locus or because
+### the specific transcript could not be validated (eg Auts2).  
+### In this analysis, the transcript is irrelevant thus we will
+### replace missing mm10 symbols with their mm9 counterparts.
+sun_lens_peaks <- sun_lens_peaks %>%
+  rowwise() %>%
+  mutate(
+    mm10_Symbol = ifelse(mm10_Symbol == "", mm9_Symbol, mm10_Symbol)
+  ) %>% group_by() %>%
+  filter(!grepl("\\|", mm10_Symbol))
+
+sun_forebrain_peaks <- sun_forebrain_peaks %>%
+  rowwise() %>%
+  mutate(
+    mm10_Symbol = ifelse(mm10_Symbol == "", mm9_Symbol, mm10_Symbol)
+  ) %>% group_by() %>%
+  filter(!grepl("\\|", mm10_Symbol))
+
+
+
+
+
+### Collapse to genes and count peaks of each category
+sun_lens_peaks %>%
+  group_by(mm10_Symbol, Peak) %>%
+  filter(row_number() == 1) %>%
+  group_by(mm10_Symbol) %>%
+  summarise(
+    Adjacent_Peaks = n(),
+    Promoter_Peaks = sum(grepl("prot", Type)),
+    Exon_Peaks = sum(grepl("exon", Type)),
+    Intron_Peaks = sum(grepl("intron", Type)),
+    Distal_Peaks = sum(grepl("distal", Type))
+  ) %>% group_by() %>%
+  rename(Target = mm10_Symbol) %>% 
+  as.data.frame() -> sun_lens_peaks
+
+sun_forebrain_peaks %>%
+  group_by(mm10_Symbol, Peak) %>%
+  filter(row_number() == 1) %>%
+  group_by(mm10_Symbol) %>%
+  summarise(
+    Adjacent_Peaks = n(),
+    Promoter_Peaks = sum(grepl("prot", Type)),
+    Exon_Peaks = sum(grepl("exon", Type)),
+    Intron_Peaks = sum(grepl("intron", Type)),
+    Distal_Peaks = sum(grepl("distal", Type))
+  ) %>% group_by() %>%
+  rename(Target = mm10_Symbol) %>% 
+  as.data.frame() -> sun_forebrain_peaks
 
 
 ##############################################################################
@@ -108,6 +380,21 @@ row.names(samples) <- gsub(
   samples$file
 )
 
+################ Add Annotation flags to gene metadata table #################
+
+pax6.master$genes$IS_ISYTE_P56 <- FALSE
+pax6.master$genes$IS_ZONULE <- FALSE
+pax6.master$genes$IS_TRRUST_PAX6_TARGET <- FALSE
+pax6.master$genes$IS_SUN_PAX6_TARGET <- FALSE
+pax6.master$genes$IS_SUN_PAX6_PEAK <- FALSE
+pax6.master$genes$SUN_PROMOTER <- 0
+pax6.master$genes$SUN_EXON <- 0
+pax6.master$genes$SUN_INTRON <- 0
+pax6.master$genes$SUN_DISTAL <- 0
+
+
+
+####################  Create master for DegNorm counts #######################
 counts <- degnorm_results$counts_normed[,row.names(samples)]
 genes <- pax6.master$genes[row.names(counts),]
 pax6.master.dgn <- DGEList(
@@ -116,6 +403,7 @@ pax6.master.dgn <- DGEList(
   samples=samples
 )
 colnames(pax6.master.dgn) <- pax6.master.dgn$samples$label
+
 
 ### Save counts and DI's extracted from the DegNorm results object
 write.csv(
