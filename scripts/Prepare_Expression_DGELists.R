@@ -469,15 +469,16 @@ for(f in c(
 
 syn_count_files <- append(
   syn_count_files,
-  syn_isyte,
-  syn_homology,
-  syn_zonules,
-  syn_trrust_targets,
-  syn_sun_targets,
-  syn_sun_lens_peaks,
-  syn_sun_forebrain_peaks
+  list(
+    syn_isyte,
+    syn_homology,
+    syn_zonules,
+    syn_trrust_targets,
+    syn_sun_targets,
+    syn_sun_lens_peaks,
+    syn_sun_forebrain_peaks
+  )
 )
-
 ## Upload this script
 syn_script <- File(
   path=script_path,
