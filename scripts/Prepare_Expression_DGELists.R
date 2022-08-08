@@ -389,7 +389,7 @@ pax6.master$genes$IS_ISYTE_P56 <- pax6.master$genes$SYMBOL %in% (
 )
 
 pax6.master$genes$IS_ZONULE <- pax6.master$genes$gene_id %in% ( 
-  zonules$Gene.stable.ID
+  zonules$Mouse.gene.stable.ID
 )
 
 pax6.master$genes$IS_TRRUST_PAX6_TARGET <- pax6.master$genes$SYMBOL %in% (
@@ -405,15 +405,13 @@ pax6.master$genes$IS_SUN_PAX6_LENS_PEAK <- pax6.master$genes$SYMBOL %in% (
 )
 
 pax6.master$genes$IS_SUN_PAX6_FOREBRAIN_PEAK <- (
-  pax6.master$genes$SYMBOL %in% sun_lens_peaks$Target
+  pax6.master$genes$SYMBOL %in% sun_forebrain_peaks$Target
 )
 
 #pax6.master$genes$SUN_LENS_PROMOTER <- 0
 #pax6.master$genes$SUN_LENS_EXON <- 0
 #pax6.master$genes$SUN_LENS_INTRON <- 0
 #pax6.master$genes$SUN_LENS_DISTAL <- 0
-
-
 
 ####################  Create master for DegNorm counts #######################
 counts <- degnorm_results$counts_normed[,row.names(samples)]
@@ -468,6 +466,17 @@ for(f in c(
     )
   )
 }
+
+syn_count_files <- append(
+  syn_count_files,
+  syn_isyte,
+  syn_homology,
+  syn_zonules,
+  syn_trrust_targets,
+  syn_sun_targets,
+  syn_sun_lens_peaks,
+  syn_sun_forebrain_peaks
+)
 
 ## Upload this script
 syn_script <- File(
