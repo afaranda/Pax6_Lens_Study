@@ -27,8 +27,12 @@ synGet <- function(entity, downloadLocation='.'){
 }
 
 ## Wrapper for synStore
-synStore <- function(entity){
-  x <- conn$store(entity)
+synStore <- function(entity, used=NULL, executed=NULL){
+  x <- conn$store(
+    obj=entity,
+    used = used,
+    executed = executed
+  )
   return(x$properties$id)
 }
 
