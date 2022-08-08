@@ -75,7 +75,14 @@ if(file.exists('data/isyte528_long_table.csv')){
   stop("Run Prepare_Expression_DGELists.R first")
 }
 
-
+isyte528 %>%
+  filter(Platform == "affy430") %>%
+  rowwise() %>%
+  mutate(
+    IS_ISYTE_P56 = (
+      Interval=="P56" & fold_change > 1 & p_value < 0.05
+    )
+  ) %>% as.data.frame() -> isyte528
 ############################# Load Zonule Data ###############################
 
 syn_zonules <- synFindEntityId(
@@ -260,11 +267,6 @@ sun_forebrain_peaks$mm10_Symbol <- gsub(
   "Col4a3bp", "Cert1", sun_forebrain_peaks$mm10_Symbol
 )
 
-
-
-
-
-
 ### Many of the symbols missing in the mm10 column were lost during
 ### Mapping.  In most cases this is because the RefSeq ID has been
 ### deprecated, either due to new data about the locus or because
@@ -382,15 +384,34 @@ row.names(samples) <- gsub(
 
 ################ Add Annotation flags to gene metadata table #################
 
-pax6.master$genes$IS_ISYTE_P56 <- FALSE
-pax6.master$genes$IS_ZONULE <- FALSE
-pax6.master$genes$IS_TRRUST_PAX6_TARGET <- FALSE
-pax6.master$genes$IS_SUN_PAX6_TARGET <- FALSE
-pax6.master$genes$IS_SUN_PAX6_PEAK <- FALSE
-pax6.master$genes$SUN_PROMOTER <- 0
-pax6.master$genes$SUN_EXON <- 0
-pax6.master$genes$SUN_INTRON <- 0
-pax6.master$genes$SUN_DISTAL <- 0
+pax6.master$genes$IS_ISYTE_P56 <- pax6.master$genes$SYMBOL %in% (
+  isyte528[isyte528$IS_ISYTE_P56,"MGI.symbol"]
+)
+
+pax6.master$genes$IS_ZONULE <- pax6.master$genes$gene_id %in% ( 
+  zonules$Gene.stable.ID
+)
+
+pax6.master$genes$IS_TRRUST_PAX6_TARGET <- pax6.master$genes$SYMBOL %in% (
+  trrust_targets$Target
+)
+
+pax6.master$genes$IS_SUN_PAX6_TARGET <- pax6.master$genes$SYMBOL %in% (
+  sun_targets$Target
+)
+
+pax6.master$genes$IS_SUN_PAX6_LENS_PEAK <- pax6.master$genes$SYMBOL %in% (
+  sun_lens_peaks$Target
+)
+
+pax6.master$genes$IS_SUN_PAX6_FOREBRAIN_PEAK <- (
+  pax6.master$genes$SYMBOL %in% sun_lens_peaks$Target
+)
+
+#pax6.master$genes$SUN_LENS_PROMOTER <- 0
+#pax6.master$genes$SUN_LENS_EXON <- 0
+#pax6.master$genes$SUN_LENS_INTRON <- 0
+#pax6.master$genes$SUN_LENS_DISTAL <- 0
 
 
 
