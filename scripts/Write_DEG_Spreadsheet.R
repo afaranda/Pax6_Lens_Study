@@ -206,34 +206,34 @@ contrast_descriptions<-list(
   WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
   P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
   Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
-  Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
-  `2Way_Fib_vs_Epi`="2 Way interaction model lens fiber cells vs lens fiber cells",
-  `2Way_P6_vs_WT`="2 Way interaction model Sey vs Wildtype",
-  `2Way_Interaction`="2 Way interaction model haploinsufficiency and differentiation",
-  DegNorm_WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
-  DegNorm_P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
-  DegNorm_Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
-  DegNorm_Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
-  DegNorm_2Way_Fib_vs_Epi="2 Way interaction model lens fiber cells vs lens fiber cells",
-  DegNorm_2Way_P6_vs_WT="2 Way interaction model Sey vs Wildtype",
-  DegNorm_2Way_Interaction="2 Way interaction model haploinsufficiency and differentiation"
+  Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells"#,
+  # `2Way_Fib_vs_Epi`="2 Way interaction model lens fiber cells vs lens fiber cells",
+  # `2Way_P6_vs_WT`="2 Way interaction model Sey vs Wildtype",
+  # `2Way_Interaction`="2 Way interaction model haploinsufficiency and differentiation",
+  # DegNorm_WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
+  # DegNorm_P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
+  # DegNorm_Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
+  # DegNorm_Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
+  # DegNorm_2Way_Fib_vs_Epi="2 Way interaction model lens fiber cells vs lens fiber cells",
+  # DegNorm_2Way_P6_vs_WT="2 Way interaction model Sey vs Wildtype",
+  # DegNorm_2Way_Interaction="2 Way interaction model haploinsufficiency and differentiation"
 )
 
 contrast_match_bias<-list(
   WT_Fibers_vs_Epi="P",
   P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
   Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
-  Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
-  `2Way_Fib_vs_Epi`="2 Way interaction model lens fiber cells vs lens fiber cells",
-  `2Way_P6_vs_WT`="2 Way interaction model Sey vs Wildtype",
-  `2Way_Interaction`="2 Way interaction model haploinsufficiency and differentiation",
-  DegNorm_WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
-  DegNorm_P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
-  DegNorm_Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
-  DegNorm_Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
-  DegNorm_2Way_Fib_vs_Epi="2 Way interaction model lens fiber cells vs lens fiber cells",
-  DegNorm_2Way_P6_vs_WT="2 Way interaction model Sey vs Wildtype",
-  DegNorm_2Way_Interaction="2 Way interaction model haploinsufficiency and differentiation"
+  Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells"#,
+  # `2Way_Fib_vs_Epi`="2 Way interaction model lens fiber cells vs lens fiber cells",
+  # `2Way_P6_vs_WT`="2 Way interaction model Sey vs Wildtype",
+  # `2Way_Interaction`="2 Way interaction model haploinsufficiency and differentiation",
+  # DegNorm_WT_Fibers_vs_Epi="Wildtype lens fiber cells vs lens epithelial cells",
+  # DegNorm_P6_Fibers_vs_Epi="Sey lens fiber cells vs lens epithelial cells",
+  # DegNorm_Epi_P6_vs_WT="Sey lens epithelial cells vs lens epithelial cells",
+  # DegNorm_Fibers_P6_vs_WT="Sey lens fiber cells vs lens fiber cells",
+  # DegNorm_2Way_Fib_vs_Epi="2 Way interaction model lens fiber cells vs lens fiber cells",
+  # DegNorm_2Way_P6_vs_WT="2 Way interaction model Sey vs Wildtype",
+  # DegNorm_2Way_Interaction="2 Way interaction model haploinsufficiency and differentiation"
 )
 
 # Fetch files currently stored in DEG Spreadsheets folder
