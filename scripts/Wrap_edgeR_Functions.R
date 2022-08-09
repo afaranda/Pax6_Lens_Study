@@ -15,9 +15,9 @@ library(pheatmap)
 wd<-getwd()
 ########  Wrapper function to fit a QLF model to a design matrix  ############
 processByDesign <- function(y, design, rob=T, norm="TMM"){
-  if(norm == "TMM"){
+  if(norm == "TMM" | norm == "NONE"){
     y <- y[filterByExpr(y, design),,keep.lib.sizes=F]
-    if(norm !="NONE"){y <- calcNormFactors(y,method=norm)}
+    y <- calcNormFactors(y,method=gsub("NONE", "none", norm))
     y <- estimateDisp(y, design, robust = rob)
     
     fpkm<-rpkm(y, normalized.lib.sizes = T, gene.length = "eu_length")
@@ -64,7 +64,7 @@ processByDesign <- function(y, design, rob=T, norm="TMM"){
     
     v <- voom(y, design=design, normalize.method ="quantile" )
     return(list(v=v, design=design))
-  }
+  } 
 }
 ############################ Plot Diagnostics ################################
 ## Generate diagnostic plots. 
