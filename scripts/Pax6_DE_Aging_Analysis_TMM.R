@@ -155,13 +155,21 @@ syn_aging_deg_master <- synFindEntityId(
   parent=syn_deg_tbl_dir
 )
 
-if(file.exists("results/Aging_Master_DEG_Table.Rdata")){
-  load("results/Aging_Master_DEG_Table.Rdata")
+if(
+  file.exists(
+    paste0(results,"/Aging_Master_DEG_Table.Rdata")
+  )
+){
+  load(
+    paste0(results,"/Aging_Master_DEG_Table.Rdata")
+  )
 } else if(!is.null(syn_aging_deg_master)){
   synGet(
     syn_aging_deg_master, downloadLocation="results"
   )
-  load("results/Aging_Master_DEG_Table.Rdata")
+  load(
+    paste0(results,"/Aging_Master_DEG_Table.Rdata")
+  )
 }else{
   aging.deg_master<-data.frame()  # Empty data frame to store all DEG results
   aging.disp_master<-data.frame()  # Empty data frame to store all DEG results
@@ -238,90 +246,22 @@ if(file.exists("results/Aging_Master_DEG_Table.Rdata")){
 
 
 ########################## Load in Pax6 Targets ##############################
-syn_trrust_targets <- synFindEntityId(
-  "TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
-  parent = syn_data_dir
-)
-
-if(file.exists("data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv")){
-  trrust_targets <- read.table(
-    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
-  )
-  names(trrust_targets) <- c(
-    "TFactor", "Target", "Direction","PMID"
-  )
-  
-} else if(!is.null(syn_trrust_targets)){
-  synGet(
-    syn_trrust_targets, downloadLocation="data"
-  )
-  
-  trrust_targets <- read.table(
-    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
-  )
-  names(trrust_targets) <- c(
-    "TFactor", "Target", "Direction","PMID"
-  )
-  
-}else{
-  stop("Prepare TRRUST Targets file First")
-}
-
-syn_sun_targets <- synFindEntityId(
-  "Sun2015_Pax6_DE_Tagrets.tsv",
-  parent = syn_data_dir
-)
-
-if(file.exists("data/Sun2015_Pax6_DE_Tagrets.tsv")){
-  sun_targets <- read.table(
-    "data/Sun2015_Pax6_DE_Tagrets.tsv",
-    header=T
-  )
-
-} else if(!is.null(syn_sun_targets)){
-  synGet(
-    syn_sun_targets, downloadLocation="data"
-  )
-  
-  sun_targets <- read.table(
-    "data/Sun2015_Pax6_DE_Tagrets.tsv",
-    header=T
-  )
-
-}else{
-  stop("Prepare TRRUST Targets file First")
-}
-
-### For Combined Targets, Use the observation from Sun 2015 
-combined_targets <- bind_rows(
-  sun_targets %>%
-    mutate(
-      Reference=ifelse(
-        Target %in% intersect(
-          sun_targets$Target, 
-          trrust_targets$Target
-        ),
-        "Both","Sun_2015"
-      ) 
-    ) %>%
-    select(
-      Reference,
-      Target,
-      Direction
-    ),
-  trrust_targets %>%
-    mutate(
-      Reference="TRRUST"
-    ) %>%
-    select(
-      Reference,
-      Target,
-      Direction
-    )%>% filter(
-      !Target %in% intersect(sun_targets$Target, trrust_targets$Target)
-    )
-)
-
+# 
+# trrust_targets <- pax6.master$genes %>%     ## Set up Vectors of symbols for
+#   filter(IS_TRRUST_PAX6_TARGET) %>%         ## downstream analysis
+#   pull('SYMBOL')
+# 
+# sun_targets <- pax6.master$genes %>%      
+#   filter(IS_SUN_PAX6_TARGET) %>%
+#   pull('SYMBOL')
+# 
+# sun_lens_peaks <- pax6.master$genes %>% 
+#   filter(IS_SUN_PAX6_LENS_PEAK) %>%
+#   pull('SYMBOL')
+# 
+# sun_forebrain_peaks <- pax6.master$genes %>% 
+#   filter(IS_SUN_PAX6_forebrain_PEAK) %>%
+#   pull('SYMBOL')
 
 ########################### Load KEGG Pathway data ###########################
 
@@ -386,8 +326,6 @@ if(
 
 ## Final list of existing data files used by this script
 used_files <- list(
-  syn_sun_targets,
-  syn_trrust_targets,
   syn_dgelists,
   syn_deg_master,
   syn_aging_dgelists,
@@ -460,9 +398,6 @@ mmu04151_genes <- AnnotationDbi::select(
 ### Join Path ID's on Advaita tables
 lec_path <- lec_path %>% inner_join(kpn, by="pName")
 lfc_path <- lfc_path %>% inner_join(kpn, by="pName")
-
-
-
 
 #####################  Setup group and contrast iterators ####################
 
@@ -537,7 +472,10 @@ compare_deg <- function(
     left_join(
       pax6.master$genes %>%
         select(
-          gene_id, SYMBOL, DESCRIPTION
+          gene_id, SYMBOL, DESCRIPTION,
+          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
+          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
+          IS_SUN_PAX6_FOREBRAIN_PEAK
         ),
       by="gene_id"
     )
@@ -596,10 +534,7 @@ compare_deg <- function(
   
   return(
     test_data %>%
-      filter(IS_PAX6 & IS_INJURY) %>%
-      mutate(
-        PAX6_TARGET = SYMBOL %in% combined_targets$Target
-      )
+      filter(IS_PAX6 & IS_INJURY)
   )
 }
 
@@ -611,9 +546,28 @@ contrasts=list(
   Epithelium=c('WTE', 'P6E', 'YE0', 'AE0'),
   Fibers=c('WTF', 'P6F', 'YF0', 'AF0'),
   Young_Injury=c('WTE', 'P6E', 'YE0', 'YE24'),
-  Aged_Injury=c('WTE', 'P6E', 'AE0', 'AE24')
+  Aged_Injury=c('WTE', 'P6E', 'AE0', 'AE24'),
+  P6vsWT = c('WTE', 'P6E', 'WTF', 'P6F')
 )
 
+contrast_descriptions<-list(
+  WTFvsWTE="Wildtype lens fiber cells vs lens epithelial cells",
+  P6FvsP6E="Sey lens fiber cells vs lens epithelial cells",
+  P6EvsWTE="Sey lens epithelial cells vs lens epithelial cells",
+  P6FvsWTF="Sey lens fiber cells vs lens fiber cells",
+  AE0vsYE0="Wildtype Lens Epithelium 24 months vs 3 months age",
+  AF0vsYF0="Wildtype Lens Fibers 24 months vs 3 months age",
+  YE24vsYE0="24-Hour injury response in 3-month old wildtype LEC",
+  AE24vsAE0="24-Hour injury response in 24-month old wildtype LEC"
+)
+
+templates <- list(
+  Epithelium="Pax6_HSvsWT_LEC_X_Aging_LEC_template.xlsx",
+  Fibers="Pax6_HSvsWT_LFC_X_Aging_LFC_template.xlsx",
+  Young_Injury="Pax6_HSvsWT_LEC_X_3Month_Injury_template.xlsx",
+  Aged_Injury="Pax6_HSvsWT_LEC_X_24Month_Injury_template.xlsx",
+  P6vsWT = "Pax6_HS_LEC_X_LFC_template.xlsx"
+)
 
 ####### Iterate over contrasts and extract DE Results for Pax6 Targets #######
 ########### Calculate Fisher's Exact Test results for each contrast  #########
@@ -634,15 +588,29 @@ for(c in names(contrasts)){
       Test == "ExactTest"
   )
   
-  inj <- aging.deg_master %>%
-    filter(
-      Test == "ExactTest" &
-        Partition == "Pair" &
+  if(contrasts[[c]][3] != "WTF"){
+    inj <- aging.deg_master %>%
+      filter(
+        Test == "ExactTest" &
+          Partition == "Pair" &
+          Filtered == "ribo" &
+          Group_1 == contrasts[[c]][3] &
+          Group_2 == contrasts[[c]][4]
+      )
+  } else {
+    inj<- pax6.deg_master %>% filter(
+      Partition == "Pair" &
         Filtered == "ribo" &
         Group_1 == contrasts[[c]][3] &
-        Group_2 == contrasts[[c]][4]
+        Group_2 == contrasts[[c]][4] &
+        Test == "ExactTest"
     )
-  print(c)
+  }
+  
+  print(paste(rep("#",80),collapse=""))
+  print(paste("Comparison: ", c))
+  print("")
+  
   pax6_aging_deg_table <-bind_rows(
     pax6_aging_deg_table,
     compare_deg(pax6_deg, inj, result_label=c)
@@ -665,33 +633,52 @@ for(c in names(contrasts)){
       Test == "ExactTest"
   )
   
-  inj <- aging.deg_master %>%
-    filter(
-      Test == "ExactTest" &
-        Partition == "Pair" &
+  if(contrasts[[c]][3] != "WTF"){
+    inj <- aging.deg_master %>%
+      filter(
+        Test == "ExactTest" &
+          Partition == "Pair" &
+          Filtered == "ribo" &
+          Group_1 == contrasts[[c]][3] &
+          Group_2 == contrasts[[c]][4]
+      )
+    
+  } else {
+    inj<- pax6.deg_master %>% filter(
+      Partition == "Pair" &
         Filtered == "ribo" &
         Group_1 == contrasts[[c]][3] &
-        Group_2 == contrasts[[c]][4]
+        Group_2 == contrasts[[c]][4] &
+        Test == "ExactTest"
     )
+  }
+  print(paste(rep("#",80),collapse=""))
+  print(paste("Comparison: ", c))
+  print("")
   
-  print(c)
   
-  C1 <- "P6vsWT"
+  C1 <- paste0(
+    contrasts[[c]][1],"vs",contrasts[[c]][2]
+  )
   C2 <- paste0(
     contrasts[[c]][4],"vs",contrasts[[c]][3]
   )
-  template <- paste0("templates/Pax6_LEC_",C2,"_overlap_template.xlsx")
-  fn <- paste0("Pax6_HS_vs_WT_X_",c,"DEG_Comparison.xlsx")
+  fn <- gsub("template", "", templates[[c]])
   path <- paste(results, fn, sep="/")
   write.csv(pax6_aging_deg_table, path)
   result_files <- append(result_files, path)
   createMethodComparisonSpreadsheet(
-    C1 = C1, C2 = C2, template =template, #"templates/overlap.xlsx",
-    dg1 = pax6_deg, dg2 = inj, pref = "PCO", fname = path,
-    dg2.me = 2, dg1.ds = "Pax6 HS vs WT",
-    dg2.ds = c, unlog = T,
-    dg2.bioFun=bioSigRNASeq, idc = "gene_id",
-    annot=pax6.master$genes %>% select(gene_id, SYMBOL, DESCRIPTION), #rnc=comp.meta[[c]][["rnc"]]
+    C1 = C1, C2 = C2, template =paste0("templates/",templates[[c]]), 
+    dg1 = pax6_deg, dg2 = inj, pref = "AGE", fname = path,
+    dg2.me = 2, dg1.ds = contrast_descriptions[[C1]],
+    dg2.ds = contrast_descriptions[[C2]], 
+    dg2.bioFun=bioSigRNASeq, idc = "gene_id", unlog = T,
+    annot=pax6.master$genes %>% select(
+      gene_id, SYMBOL, DESCRIPTION, 
+      IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
+      IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
+      IS_SUN_PAX6_FOREBRAIN_PEAK
+    )
   )
 }
 
@@ -705,23 +692,36 @@ for(c in names(contrasts)){
 pathways <- list(PI3K = mmu04151_genes, Cytokine = mmu04060_genes)
 for(pw in names(pathways)){
   for(c in names(contrasts)){
-    inj <- aging.deg_master %>%
-      filter(
-        Test == "ExactTest" &
-          Partition == "Pair" &
+    pax6_deg <- pax6.deg_master %>% filter(
+      Partition == "Pair" &
+        Filtered == "ribo" &
+        Group_1 == contrasts[[c]][1] &
+        Group_2 == contrasts[[c]][2] &
+        Test == "ExactTest"
+    )
+    
+    if(contrasts[[c]][3] != "WTF"){
+      inj <- aging.deg_master %>%
+        filter(
+          Test == "ExactTest" &
+            Partition == "Pair" &
+            Filtered == "ribo" &
+            Group_1 == contrasts[[c]][3] &
+            Group_2 == contrasts[[c]][4]
+        )
+      
+    } else {
+      inj<- pax6.deg_master %>% filter(
+        Partition == "Pair" &
           Filtered == "ribo" &
           Group_1 == contrasts[[c]][3] &
-          Group_2 == contrasts[[c]][4]
-      )
-    if(c == "LFC_P6vsWT"){
-      inj <- pax6.deg_master %>% filter(
-        Partition == "Pair",
-        Filtered == "ribo",
-        Group_1 == "WTF",
-        Group_2 == "P6F",
-        Test == "ExactTest"
+          Group_2 == contrasts[[c]][4] &
+          Test == "ExactTest"
       )
     }
+    print(paste(rep("#",80),collapse=""))
+    print(paste("Comparison: ", c))
+    print("")
     
     print(c)
     df <- inner_join(
