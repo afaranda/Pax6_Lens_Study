@@ -10,17 +10,18 @@
 library(edgeR)
 library(dplyr)
 library(ggplot2)
-library(synapser)
+#library(synapser)
+
+
+setwd("~/Documents/23Feb2022_Pax6_Study_DEG_Analysis")
 source("scripts/Overlap_Comparison_Functions.R")
 source("scripts/Wrap_edgeR_Functions.R")
-
-
-setwd("~/Documents/11Sep2021_Pax6_Study_DEG_Analysis")
+source("scripts/synapse_reticulate_wrapper.R")
 wd<-getwd()
 data_dir="data"
 
 # Get Synapse ID's
-synLogin()
+#synLogin()
 syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
 syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
