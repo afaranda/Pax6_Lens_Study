@@ -21,6 +21,12 @@ synFindEntityId <- function(name, parent=NULL){
   return(conn$findEntityId(name = name, parent = parent))
 }
 
+## Wrapper for synGetChildren
+synGetChildren <- function(parent=NULL){
+ return(iterate(conn$getChildren(parent = parent)))
+}
+
+
 ## Wrapper for synGet
 synGet <- function(entity, downloadLocation='.'){
   conn$get(entity, downloadLocation = downloadLocation)

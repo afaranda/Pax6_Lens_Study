@@ -13,19 +13,20 @@ library(tidyr)
 library(tibble)
 library(dplyr)
 library(tibble)
-library(synapser)
+#library(synapser)
 options(echo=T)
 
 # Enter Working Directory and Load Raw Data
 setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
 source('scripts/Excel_Write_Functions.R')
 source('scripts/Overlap_Comparison_Functions.R')
+source('scripts/synapse_reticulate_wrapper.R')
 wd<-getwd()
 results<-paste(wd,'results',sep='/')
 data_dir <- paste0(wd,"/data")         ## Local data directory
 
 ######################### Setup Synapse Connection ###########################
-synLogin()
+#synLogin()
 syn_project <- synFindEntityId("Pax6_Happloinsuficiency_In_The_Lens")
 syn_code_dir <- synFindEntityId("code", parent=syn_project)
 syn_data_dir <- synFindEntityId("data", parent=syn_project)
@@ -35,12 +36,12 @@ syn_deg_sps_dir <- synFindEntityId("DEG_Spreadsheets", parent = syn_project)
 
 
 ## Check for the DEG_Spreadsheets_Pairwise_Analysis folder
-syn_deg_tbl_dir <- synapser::synFindEntityId(
+syn_deg_tbl_dir <- synFindEntityId(
   "DEG_Tables",
   syn_project
 )
 
-syn_deg_sps_dir <- synapser::synFindEntityId(
+syn_deg_sps_dir <- synFindEntityId(
   "DEG_Spreadsheets",
   syn_project
 )
@@ -374,7 +375,9 @@ for(c in names(contrasts)){
     # Specify columns passed to spreadsheet creator
     cols = c(
       'gene_id', 'SYMBOL', 'DESCRIPTION','SEQNAME', 'logFC', 'PValue',
-      'FDR', Avg1, Avg2, 'Group_1', 'Group_2'
+      'FDR', Avg1, Avg2, 'Group_1', 'Group_2', 'IS_ISYTE_P56', 'IS_ZONULE',
+      'IS_TRRUST_PAX6_TARGET', 'IS_SUN_PAX6_TARGET', 'IS_SUN_PAX6_LENS_PEAK',
+      'IS_SUN_PAX6_FOREBRAIN_PEAK'
     )
     print(cols)
     
