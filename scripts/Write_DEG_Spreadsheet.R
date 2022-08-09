@@ -427,10 +427,10 @@ for(c in names(contrasts)){
       ),
       img_set=list(
         list(
-          fn=gcfn, sr=48, sc=2
+          fn=gcfn, sr=61, sc=2
         ),
         list(
-          fn=lnfn, sr=48, sc=6
+          fn=lnfn, sr=61, sc=6
         )
       )  
     )
