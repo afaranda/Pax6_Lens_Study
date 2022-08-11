@@ -204,8 +204,11 @@ isyte_enrichment <- function(
     left_join(
       pax6_deg %>%
         select(
-          gene_id, pax6_logFC = logFC, pax6_FDR = FDR,
-          pax6_Avg1=Avg1, pax6_Avg2=Avg2
+          gene_id, SYMBOL, DESCRIPTION,
+          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
+          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
+          IS_SUN_PAX6_FOREBRAIN_PEAK, pax6_logFC = logFC, 
+          pax6_FDR = FDR, pax6_Avg1=Avg1, pax6_Avg2=Avg2
         ),
       by="gene_id"
     ) %>%
