@@ -155,95 +155,9 @@ isyte_528_P56 <- isyte528 %>%
   ) %>%
   pull("gene_id")
 
-########################## Load in Pax6 Targets ##############################
-syn_trrust_targets <- synFindEntityId(
-  "TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
-  parent = syn_data_dir
-)
-
-if(file.exists("data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv")){
-  trrust_targets <- read.table(
-    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
-  )
-  names(trrust_targets) <- c(
-    "TFactor", "Target", "Direction","PMID"
-  )
-  
-} else if(!is.null(syn_trrust_targets)){
-  synGet(
-    syn_trrust_targets, downloadLocation="data"
-  )
-  
-  trrust_targets <- read.table(
-    "data/TRRUST_Pax6_targets.mouse_03Feb2022.tsv",
-  )
-  names(trrust_targets) <- c(
-    "TFactor", "Target", "Direction","PMID"
-  )
-  
-}else{
-  stop("Prepare TRRUST Targets file First")
-}
-
-syn_sun_targets <- synFindEntityId(
-  "Sun2015_Pax6_DE_Tagrets.tsv",
-  parent = syn_data_dir
-)
-
-if(file.exists("data/Sun2015_Pax6_DE_Tagrets.tsv")){
-  sun_targets <- read.table(
-    "data/Sun2015_Pax6_DE_Tagrets.tsv",
-    header=T
-  )
-
-} else if(!is.null(syn_sun_targets)){
-  synGet(
-    syn_sun_targets, downloadLocation="data"
-  )
-  
-  sun_targets <- read.table(
-    "data/Sun2015_Pax6_DE_Tagrets.tsv",
-    header=T
-  )
-
-}else{
-  stop("Prepare TRRUST Targets file First")
-}
-
-### For Combined Targets, Use the observation from Sun 2015 
-combined_targets <- bind_rows(
-  sun_targets %>%
-    mutate(
-      Reference=ifelse(
-        Target %in% intersect(
-          sun_targets$Target, 
-          trrust_targets$Target
-        ),
-        "Both","Sun_2015"
-      ) 
-    ) %>%
-    select(
-      Reference,
-      Target,
-      Direction
-    ),
-  trrust_targets %>%
-    mutate(
-      Reference="TRRUST"
-    ) %>%
-    select(
-      Reference,
-      Target,
-      Direction
-    )%>% filter(
-      !Target %in% intersect(sun_targets$Target, trrust_targets$Target)
-    )
-)
 
 ## Final list of existing data files used by this script
 used_files <- list(
-  syn_sun_targets,
-  syn_trrust_targets,
   syn_dgelists,
   syn_isyte,
   syn_deg_master
@@ -330,7 +244,10 @@ isyte_enrichment <- function(
     left_join(
       pax6.master$genes %>%
         select(
-          gene_id, SYMBOL, DESCRIPTION
+          gene_id, SYMBOL, DESCRIPTION,
+          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
+          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
+          IS_SUN_PAX6_FOREBRAIN_PEAK
         ),
       by="gene_id"
     )
@@ -365,10 +282,7 @@ isyte_enrichment <- function(
   
   return(
     test_data %>%
-      filter(IS_PAX6 & IS_ISYTE) %>%
-      mutate(
-        PAX6_TARGET = SYMBOL %in% combined_targets$Target
-      )
+      filter(IS_PAX6 & IS_ISYTE)
   )
 }
 
