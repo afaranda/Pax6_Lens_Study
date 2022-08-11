@@ -14,7 +14,7 @@ library(tidyr)
 library(tibble)
 library(dplyr)
 library(tibble)
-library(synapser)
+#library(synapser)
 library(ggrepel)
 library(EnhancedVolcano)
 options(echo=T)
@@ -24,6 +24,7 @@ setwd('/Users/adam/Documents/23Feb2022_Pax6_Study_DEG_Analysis/')
 source('scripts/Overlap_Comparison_Functions.R')
 source('scripts/Wrap_edgeR_Functions.R')
 source('scripts/Excel_Write_Functions.R')
+source('scripts/synapse_reticulate_wrapper.R')
 
 wd<-getwd()
 results<-paste(wd,'results/Zonule_Analysis',sep='/')
@@ -55,7 +56,7 @@ if(is.null(syn_deg_sps_dir)){
 } 
 
 ## Check for the DEG_Tables folder
-syn_deg_tbl_dir <- synapser::synFindEntityId(
+syn_deg_tbl_dir <- synFindEntityId(
   "DEG_Tables",
   syn_project
 )
