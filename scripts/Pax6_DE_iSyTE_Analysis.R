@@ -143,7 +143,17 @@ if(file.exists('data/isyte528_long_table.csv')){
   stop("Run Prepare_Expression_DGELists.R first")
 }
 
+## Deduplicate iSyTE Table -- this does not impact 
+## other spreadsheets. 
 isyte528 %>%
+  group_by(Platform, Interval, MGI.symbol) %>%
+  filter(
+    (
+      Lens_Expression + WEB_Expression == max(
+        Lens_Expression + WEB_Expression
+      )
+    )
+  ) %>% group_by() %>%
   left_join(
     pax6.master$genes %>%
       dplyr::select(SYMBOL, gene_id),
