@@ -251,17 +251,7 @@ isyte_enrichment <- function(
         isyte_fold_change > 2 & isyte_pvalue < 0.05  & 
           !is.na(isyte_fold_change)
       )
-    ) %>%
-    left_join(
-      pax6.master$genes %>%
-        select(
-          gene_id, SYMBOL, DESCRIPTION,
-          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
-          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
-          IS_SUN_PAX6_FOREBRAIN_PEAK
-        ),
-      by="gene_id"
-    )
+    ) 
   
   print(nrow(test_data))
   ## Prepare Overall Enrichment Table
@@ -323,7 +313,27 @@ for(c in names(contrasts)){
     Group_1 == contrasts[[c]][1],
     Group_2 == contrasts[[c]][2],
     Test == "ExactTest"
-  )
+  )%>%
+    left_join(
+      pax6.master$genes %>%
+        select(
+          gene_id, SYMBOL, DESCRIPTION,
+          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
+          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
+          IS_SUN_PAX6_FOREBRAIN_PEAK
+        ),
+      by="gene_id"
+    ) 
+  print(paste("All ", nrow(pax6_deg)))
+  pax6_deg <- union(
+    pax6_deg %>% 
+      filter(SYMBOL !="") %>%
+      group_by(SYMBOL) %>%
+      filter((Avg1 + Avg2) == max(Avg1 + Avg2)),
+    pax6_deg %>% filter(SYMBOL =="")
+  ) %>% group_by() %>% as.data.frame()
+  print(paste("Deduped ", nrow(pax6_deg)))
+  
   isyte <- isyte528 %>%
     filter(
       Platform == "affy430",
