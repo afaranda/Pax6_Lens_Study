@@ -57,7 +57,7 @@ if(is.null(syn_deg_sps_dir)){
 } 
 
 ## Check for the DEG_Tables folder
-syn_deg_tbl_dir <- synapser::synFindEntityId(
+syn_deg_tbl_dir <- synFindEntityId(
   "DEG_Tables",
   syn_project
 )
