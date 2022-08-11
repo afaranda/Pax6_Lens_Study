@@ -202,23 +202,7 @@ isyte_enrichment <- function(
     gene_id = universe
   ) %>%
     left_join(
-      pax6.master$genes %>%
-        select(
-          gene_id, SYMBOL, DESCRIPTION,
-          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
-          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
-          IS_SUN_PAX6_FOREBRAIN_PEAK
-        ),
-      by="gene_id"
-    )  %>%
-    left_join(
-      union(
-        pax6_deg %>% 
-          filter(SYMBOL !="") %>%
-          group_by(SYMBOL) %>%
-          filter((Avg1 + Avg2) == max(Avg1 + Avg2)),
-        pax6_deg %>% filter(SYMBOL =="")
-      ) %>% group_by() %>% as.data.frame() %>%
+      pax6_deg %>%
         select(
           gene_id, pax6_logFC = logFC, pax6_FDR = FDR,
           pax6_Avg1=Avg1, pax6_Avg2=Avg2
@@ -267,7 +251,17 @@ isyte_enrichment <- function(
         isyte_fold_change > 2 & isyte_pvalue < 0.05  & 
           !is.na(isyte_fold_change)
       )
-    ) 
+    ) %>%
+    left_join(
+      pax6.master$genes %>%
+        select(
+          gene_id, SYMBOL, DESCRIPTION,
+          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
+          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
+          IS_SUN_PAX6_FOREBRAIN_PEAK
+        ),
+      by="gene_id"
+    )
   
   print(nrow(test_data))
   ## Prepare Overall Enrichment Table
