@@ -202,6 +202,16 @@ isyte_enrichment <- function(
     gene_id = universe
   ) %>%
     left_join(
+      pax6.master$genes %>%
+        select(
+          gene_id, SYMBOL, DESCRIPTION,
+          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
+          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
+          IS_SUN_PAX6_FOREBRAIN_PEAK
+        ),
+      by="gene_id"
+    )  %>%
+    left_join(
       union(
         pax6_deg %>% 
           filter(SYMBOL !="") %>%
@@ -257,16 +267,6 @@ isyte_enrichment <- function(
         isyte_fold_change > 2 & isyte_pvalue < 0.05  & 
           !is.na(isyte_fold_change)
       )
-    ) %>%
-    left_join(
-      pax6.master$genes %>%
-        select(
-          gene_id, SYMBOL, DESCRIPTION,
-          IS_ISYTE_P56, IS_ZONULE, IS_TRRUST_PAX6_TARGET,
-          IS_SUN_PAX6_TARGET, IS_SUN_PAX6_LENS_PEAK,
-          IS_SUN_PAX6_FOREBRAIN_PEAK
-        ),
-      by="gene_id"
     ) 
   
   print(nrow(test_data))
