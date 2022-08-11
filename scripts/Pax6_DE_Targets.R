@@ -476,6 +476,16 @@ for(c in names(contrasts)){
     print(nrow(degSet))
   }   
   
+  ## Deduplicate symbols based on feature with maximum expression
+  degSet <- union(
+    degSet %>% 
+      filter(SYMBOL !="") %>%
+      group_by(SYMBOL) %>%
+      filter((Avg1 + Avg2) == max(Avg1 + Avg2)),
+    degSet %>% filter(SYMBOL =="")
+  ) %>% group_by() %>% as.data.frame()
+  print(paste("Deduped ", nrow(degSet)))
+  
   ## Add Bio Sig Flag
   degSet <- degSet %>%
     mutate(
