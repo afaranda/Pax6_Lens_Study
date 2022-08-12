@@ -533,8 +533,7 @@ compare_deg <- function(
   )
   
   return(
-    test_data %>%
-      filter(IS_PAX6 & IS_INJURY)
+    test_data
   )
 }
 
@@ -794,7 +793,8 @@ pax6.deg_master %>%                    ## All Pax6 DEG
   ) -> pax6.deg_master
 
 
-pax6_aging_deg_table %>%               ## Pax6 Intersection with Injury
+pax6_aging_deg_table  %>%
+  filter(IS_PAX6 & IS_INJURY) %>%               ## Pax6 Intersection with Injury
   inner_join(
     pax6.master$genes %>%
       select(gene_id, ENTREZID, SYMBOL) %>% 
@@ -1081,8 +1081,30 @@ path <- paste(results, fn, sep="/")
 write.csv(lfc_path_final, path)
 result_files <- append(result_files, path)
 
+##########################  Overall DEG Intersections ##########################
+
+fn <- "Aging_Overall_DEG_Intersection_Counts.csv"
+path <- paste(results, fn, sep="/")
 
 
+pax6_aging_deg_table %>% 
+  group_by(Contrast) %>%
+  summarize(
+    Total_OBS = n(),
+    Total_OBS_A = sum(!is.na(pax6_logFC)),
+    Total_OBS_B = sum(!is.na(injury_logFC)),
+    Total_OBS_AB = sum(!is.na(injury_logFC) & !is.na(pax6_logFC)),
+    DEG_P = sum(IS_PAX6),
+    DEG_I = sum(IS_INJURY),
+    DEG_PI = sum(IS_PAX6 & IS_INJURY),
+    DEG_P_NDE_I = sum(IS_PAX6 & !IS_INJURY & !is.na(injury_logFC)),
+    DEG_P_NOB_I = sum(IS_PAX6 & !IS_INJURY & is.na(injury_logFC)),
+    DEG_I_NDE_P = sum(!IS_PAX6 & IS_INJURY & !is.na(pax6_logFC)),
+    DEG_I_NOB_P = sum(!IS_PAX6 & IS_INJURY & is.na(pax6_logFC)),
+    DEG_P_OBS_I = sum(IS_PAX6 & !is.na(injury_logFC)),
+    DEG_I_OBS_P = sum(IS_INJURY & !is.na(pax6_logFC))
+  ) %>% write.csv(path)
+result_files <- append(result_files, path)
 
 ######################  Push script and data to Synapse ######################
 
