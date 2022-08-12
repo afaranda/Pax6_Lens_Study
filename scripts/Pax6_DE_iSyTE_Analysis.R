@@ -371,6 +371,7 @@ pax6.deg_master %>%
   summarise(
     Total_OBS = n() ,#length(unique(hs_symbol)),
     Total_DEG = sum(abs(logFC)>1 & FDR < 0.05 & is_bio),
+    P56_OBS = sum(is_p56),
     DEG_In_p56 = sum(is_p56 & abs(logFC)>1 & FDR < 0.05 & is_bio),
     UP_In_p56 = sum(is_p56 & (logFC > 1 & FDR < 0.05 & is_bio)),
     DOWN_In_p56= sum(is_p56 & (logFC < -1 & FDR < 0.05 & is_bio)),

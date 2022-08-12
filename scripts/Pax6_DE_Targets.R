@@ -1113,8 +1113,93 @@ write.csv(
     ), file=path, row.names = F)
 result_files <- append(result_files, path)
 
+################### Generate Summary tables for Target DE ####################
+fn <- "Pax6_Targets_DEG_Counts.csv"
+path <- paste(results, fn, sep="/")
 
-
+bind_rows(
+  pax6.deg_master %>% 
+    filter(
+      Test == "ExactTest" & Partition == "Pair" & Filtered == "ribo"
+    ) %>% inner_join(pax6.master$genes, by="gene_id") %>%
+    rowwise() %>%
+    mutate(IS_BIO =(Avg1>2 | Avg2>2) & abs(Avg1 - Avg2) > 2) %>%
+    group_by(Group_1, Group_2) %>%
+    summarize(
+      Total_OBS = n() ,#length(unique(hs_symbol)),
+      Total_DEG = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO),
+      TARGET_OBS = sum(IS_TRRUST_PAX6_TARGET),
+      DEG_TARGET = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO & IS_TRRUST_PAX6_TARGET),
+      UP_TARGET = sum(logFC>1 & FDR < 0.05 & IS_BIO & IS_TRRUST_PAX6_TARGET),
+      DOWN_TARGET = sum(logFC < -1 & FDR < 0.05 & IS_BIO & IS_TRRUST_PAX6_TARGET),
+      NON_DEG_TARGET = sum(!(abs(logFC)>1 & FDR < 0.05 & IS_BIO) & IS_TRRUST_PAX6_TARGET),
+      NO_OBS_TARGET = length(setdiff(trrust_targets$Target,SYMBOL))
+    ) %>% group_by() %>% mutate(
+      TARGET_SET = "TRRUST"
+    ) %>% as.data.frame(),
+  
+  pax6.deg_master %>% 
+    filter(
+      Test == "ExactTest" & Partition == "Pair" & Filtered == "ribo"
+    ) %>% inner_join(pax6.master$genes, by="gene_id") %>%
+    rowwise() %>%
+    mutate(IS_BIO =(Avg1>2 | Avg2>2) & abs(Avg1 - Avg2) > 2) %>%
+    group_by(Group_1, Group_2) %>%
+    summarize(
+      Total_OBS = n() ,#length(unique(hs_symbol)),
+      Total_DEG = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO),
+      TARGET_OBS = sum(IS_SUN_PAX6_TARGET),
+      DEG_TARGET = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_TARGET),
+      UP_TARGET = sum(logFC>1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_TARGET),
+      DOWN_TARGET = sum(logFC < -1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_TARGET),
+      NON_DEG_TARGET = sum(!(abs(logFC)>1 & FDR < 0.05 & IS_BIO) & IS_SUN_PAX6_TARGET),
+      NO_OBS_TARGET = length(setdiff(sun_targets$Target,SYMBOL))
+    ) %>% group_by()  %>% mutate(
+      TARGET_SET = "SUN_TARGETS"
+    ) %>% as.data.frame(),
+  
+  pax6.deg_master %>% 
+    filter(
+      Test == "ExactTest" & Partition == "Pair" & Filtered == "ribo"
+    ) %>% inner_join(pax6.master$genes, by="gene_id") %>%
+    rowwise() %>%
+    mutate(IS_BIO =(Avg1>2 | Avg2>2) & abs(Avg1 - Avg2) > 2) %>%
+    group_by(Group_1, Group_2) %>%
+    summarize(
+      Total_OBS = n() ,#length(unique(hs_symbol)),
+      Total_DEG = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO),
+      TARGET_OBS = sum(IS_SUN_PAX6_LENS_PEAK),
+      DEG_TARGET = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_LENS_PEAK),
+      UP_TARGET = sum(logFC>1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_LENS_PEAK),
+      DOWN_TARGET = sum(logFC < -1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_LENS_PEAK),
+      NON_DEG_TARGET = sum(!(abs(logFC)>1 & FDR < 0.05 & IS_BIO) & IS_SUN_PAX6_LENS_PEAK),
+      NO_OBS_TARGET = length(setdiff(sun_lens_peaks$Target,SYMBOL))
+    ) %>% group_by() %>% mutate(
+      TARGET_SET = "SUN_LENS_PEAKS"
+    ) %>% as.data.frame(),
+  pax6.deg_master %>% 
+    filter(
+      Test == "ExactTest" & Partition == "Pair" & Filtered == "ribo"
+    ) %>% inner_join(pax6.master$genes, by="gene_id") %>%
+    #group_by(Group_1, Group_2, SYMBOL) %>%
+    #filter(Avg1+Avg2==max(Avg1+Avg2))%>%
+    rowwise() %>%
+    mutate(IS_BIO =(Avg1>2 | Avg2>2) & abs(Avg1 - Avg2) > 2) %>%
+    group_by(Group_1, Group_2) %>%
+    summarize(
+      Total_OBS = n() ,#length(unique(hs_symbol)),
+      Total_DEG = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO),
+      TARGET_OBS = sum(IS_SUN_PAX6_FOREBRAIN_PEAK),
+      DEG_TARGET = sum(abs(logFC)>1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_FOREBRAIN_PEAK),
+      UP_TARGET = sum(logFC>1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_FOREBRAIN_PEAK),
+      DOWN_TARGET = sum(logFC < -1 & FDR < 0.05 & IS_BIO & IS_SUN_PAX6_FOREBRAIN_PEAK),
+      NON_DEG_TARGET = sum(!(abs(logFC)>1 & FDR < 0.05 & IS_BIO) & IS_SUN_PAX6_FOREBRAIN_PEAK),
+      NO_OBS_TARGET = length(setdiff(sun_forebrain_peaks$Target,SYMBOL))
+    ) %>% group_by() %>% mutate(
+      TARGET_SET = "SUN_FOREBRAIN_PEAKS"
+    ) %>% as.data.frame()
+)  %>% write.csv(path)
+result_files <- append(result_files, path)
 ######################  Push script and data to Synapse ######################
 
 # Add this script to the code dir

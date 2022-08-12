@@ -482,6 +482,7 @@ pax6.deg_master %>%
   summarise(
     Total_OBS = n() ,#length(unique(hs_symbol)),
     Total_DEG = sum(abs(logFC)>1 & FDR < 0.05 & is_bio),
+    ZONULE_OBS = sum(IS_ZONULE),
     DEG_In_ZONULE = sum(IS_ZONULE & abs(logFC)>1 & FDR < 0.05 & is_bio),
     UP_In_ZONULE = sum(IS_ZONULE & (logFC > 1 & FDR < 0.05 & is_bio)),
     DOWN_In_ZONULE= sum(IS_ZONULE & (logFC < -1 & FDR < 0.05 & is_bio)),
